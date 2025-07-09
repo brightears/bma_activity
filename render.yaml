@@ -1,0 +1,48 @@
+databases:
+  - name: bma-activity-db
+    plan: starter
+    databaseName: bma_activity_report
+    user: bmauser
+
+services:
+  # Backend API Service
+  - type: web
+    name: bma-activity-backend
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bma-activity-db
+          property: connectionString
+      - key: CORS_ORIGIN
+        value: https://bma-activity-frontend.onrender.com
+
+  # Frontend React Service  
+  - type: web
+    name: bma-activity-frontend
+    env: static
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://bma-activity-backend.onrender.com/api
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options  
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
