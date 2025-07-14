@@ -397,7 +397,22 @@
             <div class="form-section">
                 <h2>Sales Activities</h2>
                 <div id="sales-activities">
-                    <!-- Sales activities will be dynamically added here -->
+                    <div class="activity-item">
+                        <div class="activity-row">
+                            <select name="activity-status">
+                                <option value="progress">In Progress</option>
+                                <option value="complete">Complete</option>
+                            </select>
+                            <input type="text" name="activity-description" placeholder="Sales activity description">
+                            <select name="activity-member">
+                                <option value="">Team Member</option>
+                                <option value="Nikki">Nikki</option>
+                                <option value="Norbert">Norbert</option>
+                                <option value="All">All</option>
+                            </select>
+                            <button type="button" class="btn btn-remove" onclick="removeItem(this)">×</button>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-add" onclick="addSalesActivity()">+ Add Sales Activity</button>
             </div>
@@ -1072,15 +1087,27 @@
                 // Load sales activities
                 if (data.salesActivities && data.salesActivities.length > 0) {
                     const activitiesContainer = document.getElementById('sales-activities');
-                    activitiesContainer.innerHTML = ''; // Clear all
+                    // Clear existing items except the first one
+                    while (activitiesContainer.children.length > 1) {
+                        activitiesContainer.removeChild(activitiesContainer.lastChild);
+                    }
                     
-                    data.salesActivities.forEach(activity => {
+                    // Update first item
+                    const firstItem = activitiesContainer.querySelector('.activity-item');
+                    if (data.salesActivities[0]) {
+                        firstItem.querySelector('[name="activity-status"]').value = data.salesActivities[0].status || 'progress';
+                        firstItem.querySelector('[name="activity-description"]').value = data.salesActivities[0].description || '';
+                        firstItem.querySelector('[name="activity-member"]').value = data.salesActivities[0].member || '';
+                    }
+                    
+                    // Add remaining items
+                    for (let i = 1; i < data.salesActivities.length; i++) {
                         addSalesActivity();
                         const lastItem = activitiesContainer.querySelector('.activity-item:last-child');
-                        lastItem.querySelector('[name="activity-status"]').value = activity.status || 'progress';
-                        lastItem.querySelector('[name="activity-description"]').value = activity.description || '';
-                        lastItem.querySelector('[name="activity-member"]').value = activity.member || '';
-                    });
+                        lastItem.querySelector('[name="activity-status"]').value = data.salesActivities[i].status || 'progress';
+                        lastItem.querySelector('[name="activity-description"]').value = data.salesActivities[i].description || '';
+                        lastItem.querySelector('[name="activity-member"]').value = data.salesActivities[i].member || '';
+                    }
                 }
                 
                 // Load music items
