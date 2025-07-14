@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BMAsia Report</title>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -494,6 +496,17 @@
     </div>
 
     <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://kkhxkfdmmkhhykzljqzl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtraHhrZmRtbWtoaHlremxqcXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTA0MzksImV4cCI6MjA2ODA2NjQzOX0.H20K31RXztvPn8wREpIthNwnNEDX5hlW1x6TsTHtTTw';
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Current report ID
+        let currentReportId = null;
+        let autoSaveTimer = null;
+        
         // Initialize week number and date
         function initializeDate() {
             const now = new Date();
@@ -978,11 +991,124 @@
         }
         
         // Save draft to localStorage
-        function saveDraft() {
+        // Auto-save function with debounce
+        function autoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(saveDraft, 1000);
+        }
+        
+        async function saveDraft() {
             try {
                 const data = collectFormData();
-                console.log('Saving draft data:', data);
-                localStorage.setItem('bma-weekly-draft', JSON.stringify(data));
+                console.log('Saving to Supabase:', data);
+                
+                // Get current week info
+                const weekMatch = document.getElementById('week-number').textContent.match(/\d+/);
+                const yearMatch = document.getElementById('current-date').textContent.match(/\d{4}/);
+                const week = weekMatch ? parseInt(weekMatch[0]) : 1;
+                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+                
+                // Create or get report
+                if (!currentReportId) {
+                    const { data: reports } = await supabase
+                        .from('reports')
+                        .select('id')
+                        .eq('week_number', week)
+                        .eq('year', year)
+                        .limit(1);
+                    
+                    if (reports && reports.length > 0) {
+                        currentReportId = reports[0].id;
+                    } else {
+                        const { data: newReport } = await supabase
+                            .from('reports')
+                            .insert({ week_number: week, year: year })
+                            .select()
+                            .single();
+                        currentReportId = newReport.id;
+                    }
+                }
+                
+                // Delete existing items
+                await Promise.all([
+                    supabase.from('sales_items').delete().eq('report_id', currentReportId),
+                    supabase.from('sales_activities').delete().eq('report_id', currentReportId),
+                    supabase.from('music_items').delete().eq('report_id', currentReportId),
+                    supabase.from('tech_items').delete().eq('report_id', currentReportId),
+                    supabase.from('challenges').delete().eq('report_id', currentReportId),
+                    supabase.from('priorities').delete().eq('report_id', currentReportId)
+                ]);
+                
+                // Save new items
+                const promises = [];
+                
+                // Save sales items
+                if (data.salesData.length > 0) {
+                    const salesItems = data.salesData.map(item => ({
+                        report_id: currentReportId,
+                        date: new Date().toISOString().split('T')[0],
+                        status: item.status === 'new' ? 'New' : 'Existing',
+                        region: item.currency === 'USD' ? 'INT' : 'TH',
+                        description: item.description,
+                        zones: item.zones?.toString() || '',
+                        yearly_value: parseFloat(item.yearly) || 0,
+                        team_member: item.member
+                    }));
+                    promises.push(supabase.from('sales_items').insert(salesItems));
+                }
+                
+                // Save sales activities
+                if (data.salesActivities.length > 0) {
+                    const activities = data.salesActivities.map(item => ({
+                        report_id: currentReportId,
+                        status: item.status,
+                        description: item.description,
+                        team_member: item.member
+                    }));
+                    promises.push(supabase.from('sales_activities').insert(activities));
+                }
+                
+                // Save music items
+                if (data.musicData.length > 0) {
+                    const musicItems = data.musicData.map(item => ({
+                        report_id: currentReportId,
+                        status: item.status,
+                        description: item.description,
+                        team_member: item.member
+                    }));
+                    promises.push(supabase.from('music_items').insert(musicItems));
+                }
+                
+                // Save tech items
+                if (data.techData.length > 0) {
+                    const techItems = data.techData.map(item => ({
+                        report_id: currentReportId,
+                        status: item.status,
+                        description: item.description,
+                        team_member: item.member
+                    }));
+                    promises.push(supabase.from('tech_items').insert(techItems));
+                }
+                
+                // Save challenges
+                if (data.challenges.length > 0) {
+                    const challenges = data.challenges.map(desc => ({
+                        report_id: currentReportId,
+                        description: desc
+                    }));
+                    promises.push(supabase.from('challenges').insert(challenges));
+                }
+                
+                // Save priorities
+                if (data.priorities.length > 0) {
+                    const priorities = data.priorities.map(desc => ({
+                        report_id: currentReportId,
+                        description: desc
+                    }));
+                    promises.push(supabase.from('priorities').insert(priorities));
+                }
+                
+                await Promise.all(promises);
                 
                 // Show saved indicator
                 const savedMsg = document.createElement('div');
@@ -1005,37 +1131,76 @@
             }
         }
         
-        // Load draft from localStorage
-        function loadDraft() {
-            console.log('Checking for saved draft...');
-            const savedData = localStorage.getItem('bma-weekly-draft');
-            if (!savedData) {
-                console.log('No saved draft found');
-                return;
-            }
+        // Load draft from Supabase
+        async function loadDraft() {
+            console.log('Loading from Supabase...');
             
             try {
-                console.log('Found saved draft:', savedData);
-                const data = JSON.parse(savedData);
+                // Get current week info
+                const weekMatch = document.getElementById('week-number').textContent.match(/\d+/);
+                const yearMatch = document.getElementById('current-date').textContent.match(/\d{4}/);
+                const week = weekMatch ? parseInt(weekMatch[0]) : 1;
+                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
                 
-                // Check if it's from current week
-                const currentWeek = document.getElementById('week-number').textContent;
-                console.log('Current week:', currentWeek, 'Draft week:', data.week);
+                // Find report
+                const { data: reports } = await supabase
+                    .from('reports')
+                    .select('id')
+                    .eq('week_number', week)
+                    .eq('year', year);
                 
-                if (data.week !== currentWeek) {
-                    if (confirm(`You have a draft from week ${data.week}. Do you want to load it?`)) {
-                        console.log('Loading draft from different week');
-                        populateForm(data);
-                    } else {
-                        console.log('Removing old draft');
-                        localStorage.removeItem('bma-weekly-draft');
-                    }
-                } else {
-                    console.log('Loading draft from current week');
-                    populateForm(data);
+                if (!reports || reports.length === 0) {
+                    console.log('No data for this week');
+                    return;
                 }
+                
+                currentReportId = reports[0].id;
+                
+                // Load all data
+                const [salesResult, activitiesResult, musicResult, techResult, challengesResult, prioritiesResult] = await Promise.all([
+                    supabase.from('sales_items').select('*').eq('report_id', currentReportId),
+                    supabase.from('sales_activities').select('*').eq('report_id', currentReportId),
+                    supabase.from('music_items').select('*').eq('report_id', currentReportId),
+                    supabase.from('tech_items').select('*').eq('report_id', currentReportId),
+                    supabase.from('challenges').select('*').eq('report_id', currentReportId),
+                    supabase.from('priorities').select('*').eq('report_id', currentReportId)
+                ]);
+                
+                // Convert Supabase data to form format
+                const data = {
+                    sales: salesResult.data?.map(item => ({
+                        status: item.status === 'New' ? 'new' : 'closed',
+                        product: 'SYB',
+                        description: item.description,
+                        zones: item.zones,
+                        yearly: item.yearly_value,
+                        currency: item.region === 'INT' ? 'USD' : 'THB',
+                        member: item.team_member
+                    })) || [],
+                    salesActivities: activitiesResult.data?.map(item => ({
+                        status: item.status,
+                        description: item.description,
+                        member: item.team_member
+                    })) || [],
+                    music: musicResult.data?.map(item => ({
+                        status: item.status,
+                        description: item.description,
+                        member: item.team_member
+                    })) || [],
+                    tech: techResult.data?.map(item => ({
+                        status: item.status,
+                        description: item.description,
+                        member: item.team_member
+                    })) || [],
+                    challenges: challengesResult.data?.map(c => c.description).join('\n') || '',
+                    priorities: prioritiesResult.data?.map(p => p.description).join('\n') || ''
+                };
+                
+                console.log('Loaded data from Supabase:', data);
+                populateForm(data);
+                
             } catch (e) {
-                console.error('Error loading draft:', e);
+                console.error('Error loading from Supabase:', e);
             }
         }
         
@@ -1158,6 +1323,7 @@
                 
                 // Update metrics
                 updateMetrics();
+            autoSave();
             } catch (error) {
                 console.error('Error populating form:', error);
                 alert('There was an error loading your saved data. The form will start fresh.');
@@ -1167,7 +1333,6 @@
         // Clear draft
         function clearDraft() {
             if (confirm('Are you sure you want to clear all data and start fresh?')) {
-                localStorage.removeItem('bma-weekly-draft');
                 location.reload();
             }
         }
@@ -1176,49 +1341,34 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeDate();
             
-            // Debug localStorage
-            console.log('Page loaded. Checking localStorage...');
-            console.log('localStorage available:', typeof(Storage) !== "undefined");
-            console.log('Current URL:', window.location.href);
-            console.log('localStorage length:', localStorage.length);
-            console.log('All localStorage keys:', Object.keys(localStorage));
-            
-            // Load saved draft
+            // Load saved draft from Supabase
             loadDraft();
             
-            // Auto-save draft every 30 seconds
-            setInterval(saveDraft, 30000);
+            // Poll for updates every 30 seconds
+            setInterval(loadDraft, 30000);
             
             // Save draft on form changes
             const form = document.getElementById('report-form');
             form.addEventListener('input', (e) => {
-                console.log('Input detected, scheduling save...');
-                clearTimeout(window.saveTimeout);
-                window.saveTimeout = setTimeout(() => {
-                    console.log('Auto-saving...');
-                    saveDraft();
-                }, 2000);
+                autoSave();
             });
             
             form.addEventListener('change', (e) => {
-                console.log('Change detected, scheduling save...');
-                clearTimeout(window.saveTimeout);
-                window.saveTimeout = setTimeout(() => {
-                    console.log('Auto-saving...');
-                    saveDraft();
-                }, 1000);
+                autoSave();
             });
             
             // Add change listeners for real-time metric updates
             document.addEventListener('input', (e) => {
                 if (e.target.matches('[name*="sales-"]')) {
                     updateMetrics();
+            autoSave();
                 }
             });
             
             document.addEventListener('change', (e) => {
                 if (e.target.matches('[name*="sales-"]')) {
                     updateMetrics();
+            autoSave();
                 }
             });
         });
