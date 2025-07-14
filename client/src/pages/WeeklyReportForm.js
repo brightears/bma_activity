@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 
 // Helper function to get week number
 const getWeekNumber = (date) => {
@@ -14,7 +13,7 @@ const getWeekNumber = (date) => {
 
 const WeeklyReportForm = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = { email: 'team@bmasiapte.com', name: 'BMA Team' };
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});

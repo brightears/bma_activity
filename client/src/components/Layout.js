@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 
 // Helper function to get week number
 const getWeekNumber = (date) => {
@@ -13,14 +12,8 @@ const getWeekNumber = (date) => {
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const user = { email: 'team@bmasiapte.com', name: 'BMA Team' };
   const location = useLocation();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
@@ -57,12 +50,6 @@ const Layout = () => {
           <div className="bg-gray-100 rounded-lg p-4">
             <p className="text-sm font-medium text-gray-700">{user?.name}</p>
             <p className="text-xs text-gray-500">{user?.email}</p>
-            <button
-              onClick={handleLogout}
-              className="mt-3 text-sm text-bma-red hover:text-red-700 font-medium"
-            >
-              Sign out
-            </button>
           </div>
         </div>
       </div>
