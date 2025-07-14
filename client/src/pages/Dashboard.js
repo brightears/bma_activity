@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import axios from 'axios';
 
 const Dashboard = () => {

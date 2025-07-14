@@ -3,6 +3,15 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+// Helper function to get week number
+const getWeekNumber = (date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+};
+
 const WeeklyReportForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -11,7 +20,7 @@ const WeeklyReportForm = () => {
   const [errors, setErrors] = useState({});
   
   const [formData, setFormData] = useState({
-    weekNumber: new Date().getWeek(),
+    weekNumber: getWeekNumber(new Date()),
     year: new Date().getFullYear(),
     
     // Sales
@@ -449,15 +458,6 @@ const WeeklyReportForm = () => {
       </div>
     </form>
   );
-};
-
-// Helper function to get week number
-Date.prototype.getWeek = function() {
-  const d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
 };
 
 export default WeeklyReportForm;
