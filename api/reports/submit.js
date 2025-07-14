@@ -1,4 +1,4 @@
-import { createServerSupabaseClient, getUserFromRequest, handleSupabaseError } from '../../lib/supabase.js';
+import { createServerSupabaseClient, handleSupabaseError } from '../../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,11 +7,17 @@ export default async function handler(req, res) {
 
   const supabase = createServerSupabaseClient();
   
-  // Get authenticated user
-  const { user, error: authError } = await getUserFromRequest(req, supabase);
-  if (authError) {
-    return res.status(401).json({ error: authError });
-  }
+  // Use default user for all operations
+  const defaultUser = {
+    id: '00000000-0000-0000-0000-000000000000',
+    profile: {
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'team@bmasiapte.com',
+      username: 'BMA Team',
+      full_name: 'BMA Team',
+      role: 'admin'
+    }
+  };
 
   try {
     const {
@@ -37,7 +43,7 @@ export default async function handler(req, res) {
       .select('id')
       .eq('week_number', week_number)
       .eq('year', year)
-      .eq('created_by', user.profile.id)
+      .eq('created_by', defaultUser.profile.id)
       .single();
 
     let reportId;
@@ -61,7 +67,7 @@ export default async function handler(req, res) {
         .insert({
           week_number,
           year,
-          created_by: user.profile.id
+          created_by: defaultUser.profile.id
         })
         .select()
         .single();
@@ -87,7 +93,7 @@ export default async function handler(req, res) {
         description: item.description,
         zones: item.zones,
         yearly_value: item.yearly_value || 0,
-        team_member: item.team_member || user.profile.full_name
+        team_member: item.team_member || defaultUser.profile.full_name
       }));
       insertPromises.push(
         supabase.from('sales_items').insert(salesData)
@@ -100,7 +106,7 @@ export default async function handler(req, res) {
         report_id: reportId,
         date: item.date || new Date().toISOString().split('T')[0],
         description: item.description,
-        team_member: item.team_member || user.profile.full_name
+        team_member: item.team_member || defaultUser.profile.full_name
       }));
       insertPromises.push(
         supabase.from('music_items').insert(musicData)
@@ -113,7 +119,7 @@ export default async function handler(req, res) {
         report_id: reportId,
         date: item.date || new Date().toISOString().split('T')[0],
         description: item.description,
-        team_member: item.team_member || user.profile.full_name
+        team_member: item.team_member || defaultUser.profile.full_name
       }));
       insertPromises.push(
         supabase.from('tech_items').insert(techData)

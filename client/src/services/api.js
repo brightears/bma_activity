@@ -9,13 +9,11 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor - no auth needed, use mock token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Always use mock token for internal use
+    config.headers.Authorization = 'Bearer mock-token-for-internal-use';
     return config;
   },
   (error) => {
@@ -23,15 +21,11 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor - simplified, no auth redirects
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    // Just pass through errors, no auth handling needed
     return Promise.reject(error);
   }
 );

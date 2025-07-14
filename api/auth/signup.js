@@ -1,3 +1,5 @@
+// Authentication is disabled - this endpoint is not in use
+/*
 import { createServerSupabaseClient } from '../../lib/supabase.js';
 
 export default async function handler(req, res) {
@@ -45,4 +47,9 @@ export default async function handler(req, res) {
     console.error('Signup error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
+}
+*/
+
+export default async function handler(req, res) {
+  return res.status(404).json({ error: 'Authentication is disabled' });
 }

@@ -1,22 +1,28 @@
-import { createServerSupabaseClient, getUserFromRequest, handleSupabaseError } from '../../lib/supabase.js';
+import { createServerSupabaseClient, handleSupabaseError } from '../../lib/supabase.js';
 
 export default async function handler(req, res) {
   const supabase = createServerSupabaseClient();
   const { id } = req.query;
   
-  // Get authenticated user
-  const { user, error: authError } = await getUserFromRequest(req, supabase);
-  if (authError) {
-    return res.status(401).json({ error: authError });
-  }
+  // Use default user for all operations
+  const defaultUser = {
+    id: '00000000-0000-0000-0000-000000000000',
+    profile: {
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'team@bmasiapte.com',
+      username: 'BMA Team',
+      full_name: 'BMA Team',
+      role: 'admin'
+    }
+  };
 
   switch (req.method) {
     case 'GET':
-      return handleGetReport(req, res, supabase, user, id);
+      return handleGetReport(req, res, supabase, defaultUser, id);
     case 'PUT':
-      return handleUpdateReport(req, res, supabase, user, id);
+      return handleUpdateReport(req, res, supabase, defaultUser, id);
     case 'DELETE':
-      return handleDeleteReport(req, res, supabase, user, id);
+      return handleDeleteReport(req, res, supabase, defaultUser, id);
     default:
       return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -44,10 +50,7 @@ async function handleGetReport(req, res, supabase, user, reportId) {
       return res.status(status).json({ error: message });
     }
 
-    // Check permissions
-    if (user.profile.role !== 'admin' && report.created_by !== user.profile.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    // No permission check needed - admin user has access to all reports
 
     return res.status(200).json(report);
   } catch (error) {
@@ -182,9 +185,7 @@ async function handleDeleteReport(req, res, supabase, user, reportId) {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    if (user.profile.role !== 'admin' && report.created_by !== user.profile.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    // No permission check needed - admin user has access to all reports
 
     // Delete the report (cascade will handle related items)
     const { error } = await supabase

@@ -1,19 +1,25 @@
-import { createServerSupabaseClient, getUserFromRequest, handleSupabaseError } from '../../lib/supabase.js';
+import { createServerSupabaseClient, handleSupabaseError } from '../../lib/supabase.js';
 
 export default async function handler(req, res) {
   const supabase = createServerSupabaseClient();
   
-  // Get authenticated user
-  const { user, error: authError } = await getUserFromRequest(req, supabase);
-  if (authError) {
-    return res.status(401).json({ error: authError });
-  }
+  // Use default user for all operations
+  const defaultUser = {
+    id: '00000000-0000-0000-0000-000000000000',
+    profile: {
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'team@bmasiapte.com',
+      username: 'BMA Team',
+      full_name: 'BMA Team',
+      role: 'admin'
+    }
+  };
 
   switch (req.method) {
     case 'GET':
-      return handleGetReports(req, res, supabase, user);
+      return handleGetReports(req, res, supabase, defaultUser);
     case 'POST':
-      return handleCreateReport(req, res, supabase, user);
+      return handleCreateReport(req, res, supabase, defaultUser);
     default:
       return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -35,11 +41,9 @@ async function handleGetReports(req, res, supabase, user) {
       query = query.eq('year', year);
     }
     
-    // Admins can filter by user, others see only their own
-    if (user.profile.role === 'admin' && user_id) {
+    // Admin user can filter by user_id if provided
+    if (user_id) {
       query = query.eq('created_by', user_id);
-    } else if (user.profile.role !== 'admin') {
-      query = query.eq('created_by', user.profile.id);
     }
 
     const { data, error } = await query.order('year', { ascending: false })
