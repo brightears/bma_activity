@@ -1,204 +1,209 @@
-# BMA Activity Report - Render Deployment Guide
+# BMA Activity Report - Complete Deployment Guide
 
-This guide will walk you through deploying the BMA Activity Report system to Render with PostgreSQL.
+This guide will walk you through deploying the BMA Activity Report system using Supabase (free database) and Vercel (free hosting).
 
 ## Prerequisites
+- GitHub account
+- Node.js 18+ installed locally
+- Git installed
 
-- GitHub account with the code pushed to repository
-- Render account (sign up at render.com)
-- Basic understanding of environment variables
+## Step 1: Set Up Supabase (5 minutes)
 
-## Step 1: Push Code to GitHub
+1. **Create Supabase Account**
+   - Go to [supabase.com](https://supabase.com)
+   - Sign up with your GitHub account
+   - Click "New Project"
 
-If you haven't already pushed your code:
-
-```bash
-git push -u origin main
-```
-
-## Step 2: Deploy Backend on Render
-
-### 2.1 Create PostgreSQL Database
-
-1. Log in to [Render Dashboard](https://dashboard.render.com)
-2. Click "New +" → "PostgreSQL"
-3. Configure:
-   - **Name**: `bma-activity-db`
-   - **Database**: `bma_activity_report`
-   - **User**: Leave as default
-   - **Region**: Singapore (or closest to you)
-   - **Plan**: Starter ($7/month)
-4. Click "Create Database"
-5. Wait for database to be ready (takes 1-2 minutes)
-6. Copy the **Internal Database URL** for later use
-
-### 2.2 Create Backend Web Service
-
-1. Click "New +" → "Web Service"
-2. Connect your GitHub repository (`brightears/bma_activity`)
-3. Configure:
-   - **Name**: `bma-activity-backend`
-   - **Environment**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-   - **Plan**: Free tier (or Starter for better performance)
-
-4. Add Environment Variables (click "Advanced"):
+2. **Configure Your Project**
    ```
-   DATABASE_URL = [Internal Database URL from step 2.1]
-   NODE_ENV = production
-   PORT = 10000
-   JWT_SECRET = bma_super_secret_key_2024_activity_reports_prod
-   CORS_ORIGIN = https://bma-activity-frontend.onrender.com
+   Project name: bma-activity-report
+   Database Password: [Choose a strong password and save it!]
+   Region: [Choose closest to your team]
+   Pricing Plan: Free tier
    ```
 
-5. Click "Create Web Service"
-6. Wait for deployment (5-10 minutes)
-7. Copy the service URL (e.g., `https://bma-activity-backend.onrender.com`)
+3. **Initialize Database**
+   - Once project is created, go to **SQL Editor**
+   - Click "New Query"
+   - Copy entire contents of `supabase-schema.sql`
+   - Paste and click "Run"
+   - You should see "Success. No rows returned"
 
-### 2.3 Initialize Database
+4. **Get Your API Keys**
+   - Go to **Settings → API**
+   - Copy these values (you'll need them soon):
+     ```
+     Project URL: https://xxxxxx.supabase.co
+     Anon Key: eyJhbGc...
+     Service Key: eyJhbGc... (keep this secret!)
+     ```
 
-1. In Render dashboard, go to your backend service
-2. Click "Shell" tab
-3. Run:
+5. **Enable Email Auth**
+   - Go to **Authentication → Providers**
+   - Ensure "Email" is enabled
+   - Under **Authentication → Settings**:
+     - Site URL: `https://bma-report.vercel.app` (we'll update this later)
+     - Add to Redirect URLs: `https://bma-report.vercel.app/*`
+
+## Step 2: Prepare Your Code (5 minutes)
+
+1. **Clone/Push to GitHub**
    ```bash
-   psql $DATABASE_URL -f src/database/bma_schema.sql
+   cd "/Users/benorbe/Documents/BMA Activity Report"
+   git add .
+   git commit -m "Add Supabase integration"
+   git push origin main
    ```
 
-## Step 3: Deploy Frontend on Render
-
-1. Click "New +" → "Web Service"
-2. Connect the same GitHub repository
-3. Configure:
-   - **Name**: `bma-activity-frontend`
-   - **Root Directory**: `client`
-   - **Environment**: `Node`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npx serve -s build`
-   - **Plan**: Free tier
-
-4. Add Environment Variables:
-   ```
-   REACT_APP_API_URL = https://bma-activity-backend.onrender.com/api
-   NODE_ENV = production
+2. **Install Dependencies**
+   ```bash
+   npm install
+   cd client
+   npm install @supabase/supabase-js
+   cd ..
    ```
 
-5. Click "Create Web Service"
-6. Wait for deployment (5-10 minutes)
+3. **Update Client Files**
+   - Replace `client/src/App.jsx` with `client/src/App-supabase.jsx`
+   - Replace `client/src/components/ReportForm.jsx` with `client/src/components/ReportForm-supabase.jsx`
+   - Make sure `client/src/contexts/SupabaseAuth.jsx` exists
 
-## Step 4: Update Backend CORS
+## Step 3: Deploy to Vercel (10 minutes)
 
-1. Go back to your backend service in Render
-2. Update the `CORS_ORIGIN` environment variable to match your frontend URL
-3. The service will automatically redeploy
+1. **Create Vercel Account**
+   - Go to [vercel.com](https://vercel.com)
+   - Sign up with GitHub
+   - Click "Add New → Project"
 
-## Step 5: Test the Application
+2. **Import Your Repository**
+   - Select your GitHub repository
+   - Vercel will auto-detect the configuration
 
-1. Navigate to your frontend URL (e.g., `https://bma-activity-frontend.onrender.com`)
-2. Login with:
-   - Username: `admin`
-   - Password: `BMA2024admin!`
-3. Test creating a report
-4. Test viewing the dashboard
+3. **Configure Environment Variables**
+   In Vercel's environment variables section, add:
+   ```
+   SUPABASE_URL = https://xxxxxx.supabase.co
+   SUPABASE_ANON_KEY = eyJhbGc...
+   SUPABASE_SERVICE_KEY = eyJhbGc...
+   VITE_SUPABASE_URL = https://xxxxxx.supabase.co
+   VITE_SUPABASE_ANON_KEY = eyJhbGc...
+   ```
 
-## Custom Domain Setup (Optional)
+4. **Deploy**
+   - Click "Deploy"
+   - Wait for deployment (usually 2-3 minutes)
+   - You'll get a URL like: `https://bma-report.vercel.app`
 
-### For Frontend:
+5. **Update Supabase URLs**
+   - Go back to Supabase → Authentication → Settings
+   - Update Site URL to your Vercel URL
+   - Update Redirect URLs to include your Vercel URL
 
-1. In Render dashboard, go to your frontend service
-2. Click "Settings" → "Custom Domains"
-3. Add your domain (e.g., `reports.bmasiapte.com`)
-4. Follow DNS configuration instructions
+## Step 4: Create Users (2 minutes)
 
-### For Backend (if needed):
+1. **Invite Team Members**
+   - In Supabase, go to **Authentication → Users**
+   - Click "Invite user"
+   - Enter email addresses for your team
+   - They'll receive emails to set passwords
 
-1. Same process for backend service
-2. Use subdomain like `api.reports.bmasiapte.com`
-3. Update `REACT_APP_API_URL` in frontend environment
+2. **First User Setup**
+   - The first user to sign up will automatically be created in the database
+   - You can manually set admin role in Supabase:
+     - Go to **Table Editor → users**
+     - Find the user and change `role` to `admin`
 
-## Monitoring & Maintenance
+## Step 5: Test Your Deployment
 
-### Health Checks
+1. **Visit Your App**
+   - Go to your Vercel URL
+   - Try logging in with invited user credentials
+   - Create a test report
 
-Render automatically monitors your services. Configure health check endpoints:
-
-1. Backend: Already configured at `/` endpoint
-2. Frontend: Static site, monitored automatically
-
-### Logs
-
-- View logs in Render dashboard under "Logs" tab
-- Use filters to find specific errors
-- Set up log alerts if needed
-
-### Database Backups
-
-1. Go to your PostgreSQL instance
-2. Click "Backups" tab
-3. Configure automatic backups (recommended: daily)
-4. Download backups regularly
-
-### Scaling
-
-If you need better performance:
-
-1. **Backend**: Upgrade to Starter or Standard plan
-2. **Frontend**: Usually fine on free tier
-3. **Database**: Monitor storage usage, upgrade if needed
+2. **Verify Multi-User Access**
+   - Have a colleague log in
+   - They should see their own reports
+   - Admins can see all reports
 
 ## Troubleshooting
 
-### Backend won't start
+### "No authorization token" error
+- Make sure you're logged in
+- Check browser console for errors
+- Verify environment variables in Vercel
 
-1. Check logs for errors
-2. Verify DATABASE_URL is correct
-3. Ensure all environment variables are set
-4. Check if database is accessible
-
-### Frontend can't connect to backend
-
-1. Verify REACT_APP_API_URL is correct
-2. Check CORS_ORIGIN matches frontend URL
-3. Test backend API directly in browser
-4. Check browser console for errors
+### Can't see reports
+- Check Row Level Security policies in Supabase
+- Verify user has correct role in users table
 
 ### Database connection issues
+- Verify all environment variables are set correctly
+- Check Supabase project is not paused (free tier pauses after 1 week of inactivity)
 
-1. Verify DATABASE_URL includes `?ssl=true`
-2. Check if database is running in Render dashboard
-3. Try connecting via Render Shell
+## Local Development
 
-### Slow performance
+1. **Create `.env` file**
+   ```env
+   SUPABASE_URL=https://xxxxxx.supabase.co
+   SUPABASE_ANON_KEY=eyJhbGc...
+   SUPABASE_SERVICE_KEY=eyJhbGc...
+   VITE_SUPABASE_URL=https://xxxxxx.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJhbGc...
+   ```
 
-1. Check if services are on free tier (they sleep after 15 min)
-2. Upgrade to paid tier for always-on service
-3. Check database query performance
-4. Enable caching if needed
+2. **Run locally**
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-## Security Considerations
+## Maintenance
 
-1. **Environment Variables**: Never commit sensitive data
-2. **Database**: Use Render's internal network when possible
-3. **HTTPS**: Automatically provided by Render
-4. **Updates**: Keep dependencies updated
+### Weekly Tasks
+- Free Supabase projects pause after 1 week of inactivity
+- Just visit the Supabase dashboard weekly to keep it active
 
-## Cost Breakdown
+### Adding Features
+1. Make changes locally
+2. Test with `npm run dev`
+3. Push to GitHub
+4. Vercel auto-deploys within minutes
 
-- **Database**: $7/month (Starter)
-- **Backend**: Free (or $7/month for Starter)
-- **Frontend**: Free
-- **Total**: $7-14/month
+### Database Changes
+1. Make schema changes in Supabase SQL Editor
+2. Update corresponding API endpoints if needed
+3. Deploy new code
 
-## Support
-
-- Render Support: support@render.com
-- Render Docs: https://render.com/docs
-- Service Status: https://status.render.com
+## Cost Summary
+- **Supabase Free Tier**: $0/month
+  - 500MB database
+  - 2GB bandwidth
+  - 50K monthly active users
+- **Vercel Free Tier**: $0/month
+  - Unlimited deployments
+  - 100GB bandwidth
+  - SSL included
 
 ## Next Steps
+1. Customize the report format
+2. Add email notifications
+3. Create dashboard visualizations
+4. Export reports as PDF
 
-1. Set up monitoring alerts
-2. Configure custom domains
-3. Set up automated backups
-4. Add team members to Render dashboard
-5. Configure CI/CD with GitHub Actions (optional)
+## Support
+- Supabase Discord: discord.supabase.com
+- Vercel Support: vercel.com/support
+- Your deployment URL: [Will be shown after deployment]
+
+---
+
+**Deployment Checklist:**
+- [ ] Supabase project created
+- [ ] Database schema initialized
+- [ ] API keys copied
+- [ ] Code pushed to GitHub
+- [ ] Vercel project created
+- [ ] Environment variables set
+- [ ] Deployment successful
+- [ ] Users invited
+- [ ] Test report created
