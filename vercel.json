@@ -1,20 +1,11 @@
 {
-  "buildCommand": "cd client && npm install && npm run build",
-  "outputDirectory": "client/build",
-  "installCommand": "npm install",
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 10
-    }
-  },
+  "buildCommand": "echo 'No build needed for static HTML'",
+  "outputDirectory": ".",
+  "framework": null,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "source": "/",
+      "destination": "/simple-version/bma-weekly-report.html"
     }
   ]
 }
