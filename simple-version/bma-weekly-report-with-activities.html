@@ -1020,11 +1020,17 @@
                     if (reports && reports.length > 0) {
                         currentReportId = reports[0].id;
                     } else {
-                        const { data: newReport } = await supabase
+                        const { data: newReport, error } = await supabase
                             .from('reports')
                             .insert({ week_number: week, year: year })
                             .select()
                             .single();
+                        
+                        if (error) {
+                            console.error('Error creating report:', error);
+                            throw error;
+                        }
+                        
                         currentReportId = newReport.id;
                     }
                 }
