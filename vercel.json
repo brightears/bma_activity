@@ -1,4 +1,7 @@
 {
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/build",
+  "installCommand": "npm install",
   "functions": {
     "api/**/*.js": {
       "maxDuration": 10
@@ -11,21 +14,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/client/dist/$1"
+      "destination": "/$1"
     }
-  ],
-  "buildCommand": "cd client && npm install && npm run build",
-  "outputDirectory": "client/dist",
-  "framework": null,
-  "env": {
-    "SUPABASE_URL": "@supabase-url",
-    "SUPABASE_ANON_KEY": "@supabase-anon-key",
-    "SUPABASE_SERVICE_KEY": "@supabase-service-key"
-  },
-  "build": {
-    "env": {
-      "VITE_SUPABASE_URL": "@supabase-url",
-      "VITE_SUPABASE_ANON_KEY": "@supabase-anon-key"
-    }
-  }
+  ]
 }
