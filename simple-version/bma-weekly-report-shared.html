@@ -300,9 +300,9 @@
                 <div class="last-updated" id="last-updated"></div>
             </div>
 
-            <!-- Sales Activities -->
+            <!-- Sales Highlights -->
             <div class="form-section">
-                <h2>Sales Activities</h2>
+                <h2>Sales Highlights</h2>
                 <div id="sales-items">
                     <!-- Sales items will be dynamically added here -->
                 </div>
@@ -332,7 +332,22 @@
             <div class="form-section">
                 <h2>Sales Activities</h2>
                 <div id="sales-activities">
-                    <!-- Sales activities will be dynamically added here -->
+                    <div class="activity-item">
+                        <div class="activity-row">
+                            <select class="activity-status" onchange="autoSave()">
+                                <option value="progress">In Progress</option>
+                                <option value="complete">Complete</option>
+                            </select>
+                            <input type="text" class="activity-description" placeholder="Sales activity description" onchange="autoSave()">
+                            <select class="activity-member" onchange="autoSave()">
+                                <option value="">Team Member</option>
+                                <option value="Nikki">Nikki</option>
+                                <option value="Norbert">Norbert</option>
+                                <option value="All">All</option>
+                            </select>
+                            <button type="button" class="btn btn-remove" onclick="removeSalesActivity(this)">X</button>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-add" onclick="addSalesActivity()">+ Add Sales Activity</button>
             </div>
@@ -341,16 +356,48 @@
             <div class="form-section">
                 <h2>Music Design Deliverables</h2>
                 <div id="music-items">
-                    <!-- Music items will be dynamically added here -->
+                    <div class="activity-item">
+                        <div class="activity-row">
+                            <select class="activity-status" onchange="autoSave()">
+                                <option value="progress">In Progress</option>
+                                <option value="complete">Complete</option>
+                            </select>
+                            <input type="text" class="activity-description" placeholder="Description" onchange="autoSave()">
+                            <select class="activity-member" onchange="autoSave()">
+                                <option value="">Team Member</option>
+                                <option value="Tohmo">Tohmo</option>
+                                <option value="Kuk">Kuk</option>
+                                <option value="Scotty">Scotty</option>
+                                <option value="All">All</option>
+                            </select>
+                            <button type="button" class="btn btn-remove" onclick="removeMusicItem(this)">X</button>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-add" onclick="addMusicItem()">+ Add Music Item</button>
             </div>
 
-            <!-- Tech/Ops Activities -->
+            <!-- Tech/Ops Updates -->
             <div class="form-section">
-                <h2>Tech/Ops Activities</h2>
+                <h2>Tech/Ops Updates</h2>
                 <div id="tech-items">
-                    <!-- Tech items will be dynamically added here -->
+                    <div class="activity-item">
+                        <div class="activity-row">
+                            <select class="activity-status" onchange="autoSave()">
+                                <option value="progress">In Progress</option>
+                                <option value="complete">Complete</option>
+                            </select>
+                            <input type="text" class="activity-description" placeholder="Description" onchange="autoSave()">
+                            <select class="activity-member" onchange="autoSave()">
+                                <option value="">Team Member</option>
+                                <option value="Keith">Keith</option>
+                                <option value="A">A</option>
+                                <option value="Joe">Joe</option>
+                                <option value="All">All</option>
+                            </select>
+                            <button type="button" class="btn btn-remove" onclick="removeTechItem(this)">X</button>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-add" onclick="addTechItem()">+ Add Tech Item</button>
             </div>
@@ -491,9 +538,17 @@
             
             itemDiv.innerHTML = `
                 <div class="activity-row">
-                    <input type="date" class="activity-date" value="${data.date || getTodayDate()}" onchange="autoSave()">
+                    <select class="activity-status" onchange="autoSave()">
+                        <option value="progress" ${data.status === 'progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="complete" ${data.status === 'complete' ? 'selected' : ''}>Complete</option>
+                    </select>
                     <input type="text" class="activity-description" placeholder="Sales activity description" value="${data.description || ''}" onchange="autoSave()">
-                    <input type="text" class="activity-member" placeholder="Team Member" value="${data.team_member || ''}" onchange="autoSave()">
+                    <select class="activity-member" onchange="autoSave()">
+                        <option value="" ${!data.team_member ? 'selected' : ''}>Team Member</option>
+                        <option value="Nikki" ${data.team_member === 'Nikki' ? 'selected' : ''}>Nikki</option>
+                        <option value="Norbert" ${data.team_member === 'Norbert' ? 'selected' : ''}>Norbert</option>
+                        <option value="All" ${data.team_member === 'All' ? 'selected' : ''}>All</option>
+                    </select>
                     <button type="button" class="btn btn-remove" onclick="removeSalesActivity(this)">X</button>
                 </div>
             `;
@@ -515,9 +570,18 @@
             
             itemDiv.innerHTML = `
                 <div class="activity-row">
-                    <input type="date" class="activity-date" value="${data.date || getTodayDate()}" onchange="autoSave()">
-                    <input type="text" class="activity-description" placeholder="Music deliverable description" value="${data.description || ''}" onchange="autoSave()">
-                    <input type="text" class="activity-member" placeholder="Team Member" value="${data.team_member || ''}" onchange="autoSave()">
+                    <select class="activity-status" onchange="autoSave()">
+                        <option value="progress" ${data.status === 'progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="complete" ${data.status === 'complete' ? 'selected' : ''}>Complete</option>
+                    </select>
+                    <input type="text" class="activity-description" placeholder="Description" value="${data.description || ''}" onchange="autoSave()">
+                    <select class="activity-member" onchange="autoSave()">
+                        <option value="" ${!data.team_member ? 'selected' : ''}>Team Member</option>
+                        <option value="Tohmo" ${data.team_member === 'Tohmo' ? 'selected' : ''}>Tohmo</option>
+                        <option value="Kuk" ${data.team_member === 'Kuk' ? 'selected' : ''}>Kuk</option>
+                        <option value="Scotty" ${data.team_member === 'Scotty' ? 'selected' : ''}>Scotty</option>
+                        <option value="All" ${data.team_member === 'All' ? 'selected' : ''}>All</option>
+                    </select>
                     <button type="button" class="btn btn-remove" onclick="removeMusicItem(this)">X</button>
                 </div>
             `;
@@ -539,9 +603,18 @@
             
             itemDiv.innerHTML = `
                 <div class="activity-row">
-                    <input type="date" class="activity-date" value="${data.date || getTodayDate()}" onchange="autoSave()">
-                    <input type="text" class="activity-description" placeholder="Tech/Ops activity description" value="${data.description || ''}" onchange="autoSave()">
-                    <input type="text" class="activity-member" placeholder="Team Member" value="${data.team_member || ''}" onchange="autoSave()">
+                    <select class="activity-status" onchange="autoSave()">
+                        <option value="progress" ${data.status === 'progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="complete" ${data.status === 'complete' ? 'selected' : ''}>Complete</option>
+                    </select>
+                    <input type="text" class="activity-description" placeholder="Description" value="${data.description || ''}" onchange="autoSave()">
+                    <select class="activity-member" onchange="autoSave()">
+                        <option value="" ${!data.team_member ? 'selected' : ''}>Team Member</option>
+                        <option value="Keith" ${data.team_member === 'Keith' ? 'selected' : ''}>Keith</option>
+                        <option value="A" ${data.team_member === 'A' ? 'selected' : ''}>A</option>
+                        <option value="Joe" ${data.team_member === 'Joe' ? 'selected' : ''}>Joe</option>
+                        <option value="All" ${data.team_member === 'All' ? 'selected' : ''}>All</option>
+                    </select>
                     <button type="button" class="btn btn-remove" onclick="removeTechItem(this)">X</button>
                 </div>
             `;
@@ -600,7 +673,7 @@
             const salesActivities = [];
             document.querySelectorAll('#sales-activities .activity-item').forEach(item => {
                 salesActivities.push({
-                    date: item.querySelector('.activity-date').value,
+                    status: item.querySelector('.activity-status').value,
                     description: item.querySelector('.activity-description').value,
                     team_member: item.querySelector('.activity-member').value
                 });
@@ -609,7 +682,7 @@
             const musicItems = [];
             document.querySelectorAll('#music-items .activity-item').forEach(item => {
                 musicItems.push({
-                    date: item.querySelector('.activity-date').value,
+                    status: item.querySelector('.activity-status').value,
                     description: item.querySelector('.activity-description').value,
                     team_member: item.querySelector('.activity-member').value
                 });
@@ -618,7 +691,7 @@
             const techItems = [];
             document.querySelectorAll('#tech-items .activity-item').forEach(item => {
                 techItems.push({
-                    date: item.querySelector('.activity-date').value,
+                    status: item.querySelector('.activity-status').value,
                     description: item.querySelector('.activity-description').value,
                     team_member: item.querySelector('.activity-member').value
                 });
@@ -660,8 +733,9 @@
                     currentReportId = reports[0].id;
                     
                     // Load all data for this report
-                    const [salesResult, musicResult, techResult, challengesResult, prioritiesResult] = await Promise.all([
+                    const [salesResult, salesActivitiesResult, musicResult, techResult, challengesResult, prioritiesResult] = await Promise.all([
                         supabase.from('sales_items').select('*').eq('report_id', currentReportId),
+                        supabase.from('sales_activities').select('*').eq('report_id', currentReportId),
                         supabase.from('music_items').select('*').eq('report_id', currentReportId),
                         supabase.from('tech_items').select('*').eq('report_id', currentReportId),
                         supabase.from('challenges').select('*').eq('report_id', currentReportId),
@@ -679,11 +753,12 @@
                         salesResult.data.forEach(item => addSalesItem(item));
                     }
                     
-                    // Load sales activities from localStorage (temporary solution)
-                    const savedActivities = localStorage.getItem(`sales-activities-${week}-${year}`);
-                    if (savedActivities) {
-                        const activities = JSON.parse(savedActivities);
-                        activities.forEach(item => addSalesActivity(item));
+                    // Clear and reload sales activities
+                    document.getElementById('sales-activities').innerHTML = '';
+                    if (salesActivitiesResult.data && salesActivitiesResult.data.length > 0) {
+                        salesActivitiesResult.data.forEach(item => addSalesActivity(item));
+                    } else {
+                        addSalesActivity(); // Add default empty row
                     }
                     
                     // Load music items
@@ -777,6 +852,7 @@
                 // Delete existing items
                 await Promise.all([
                     supabase.from('sales_items').delete().eq('report_id', currentReportId),
+                    supabase.from('sales_activities').delete().eq('report_id', currentReportId),
                     supabase.from('music_items').delete().eq('report_id', currentReportId),
                     supabase.from('tech_items').delete().eq('report_id', currentReportId),
                     supabase.from('challenges').delete().eq('report_id', currentReportId),
@@ -828,12 +904,17 @@
                 
                 await Promise.all(insertPromises);
                 
-                // Save sales activities to localStorage (temporary)
+                // Save sales activities to Supabase
                 if (formData.sales_activities.length > 0) {
-                    localStorage.setItem(
-                        `sales-activities-${formData.week_number}-${formData.year}`,
-                        JSON.stringify(formData.sales_activities)
-                    );
+                    const salesActivitiesData = formData.sales_activities
+                        .filter(item => item.description) // Only save items with descriptions
+                        .map(item => ({
+                            ...item,
+                            report_id: currentReportId
+                        }));
+                    if (salesActivitiesData.length > 0) {
+                        insertPromises.push(supabase.from('sales_activities').insert(salesActivitiesData));
+                    }
                 }
                 
                 // Update the report's updated_at timestamp
@@ -893,11 +974,11 @@
                 </div>
             `;
             
-            // Sales Activities
+            // Sales Highlights
             if (data.sales_items.length > 0) {
                 reportHTML += `
                     <div style="margin-bottom: 30px;">
-                        <h3 style="color: #FF6B35; margin-bottom: 15px;">Sales Activities</h3>
+                        <h3 style="color: #FF6B35; margin-bottom: 15px;">Sales Highlights</h3>
                 `;
                 
                 data.sales_items.forEach(item => {
@@ -939,9 +1020,11 @@
                 
                 data.sales_activities.forEach(item => {
                     if (item.description) {
+                        const statusText = item.status === 'complete' ? 'COMPLETE' : 'IN PROGRESS';
+                        const statusColor = item.status === 'complete' ? '#28a745' : '#ffc107';
                         reportHTML += `
                             <div style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
-                                <strong>${item.date}</strong> - 
+                                <span style="background: ${statusColor}; color: ${item.status === 'complete' ? 'white' : 'black'}; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold;">[${statusText}]</span>
                                 ${item.description}
                                 ${item.team_member ? ` - ${item.team_member}` : ''}
                             </div>
@@ -961,9 +1044,11 @@
                 
                 data.music_items.forEach(item => {
                     if (item.description) {
+                        const statusText = item.status === 'complete' ? 'COMPLETE' : 'IN PROGRESS';
+                        const statusColor = item.status === 'complete' ? '#28a745' : '#ffc107';
                         reportHTML += `
                             <div style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
-                                <strong>${item.date}</strong> - 
+                                <span style="background: ${statusColor}; color: ${item.status === 'complete' ? 'white' : 'black'}; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold;">[${statusText}]</span>
                                 ${item.description}
                                 ${item.team_member ? ` - ${item.team_member}` : ''}
                             </div>
@@ -974,18 +1059,20 @@
                 reportHTML += `</div>`;
             }
             
-            // Tech/Ops Activities
+            // Tech/Ops Updates
             if (data.tech_items.length > 0) {
                 reportHTML += `
                     <div style="margin-bottom: 30px;">
-                        <h3 style="color: #FF6B35; margin-bottom: 15px;">Tech/Ops Activities</h3>
+                        <h3 style="color: #FF6B35; margin-bottom: 15px;">Tech/Ops Updates</h3>
                 `;
                 
                 data.tech_items.forEach(item => {
                     if (item.description) {
+                        const statusText = item.status === 'complete' ? 'COMPLETE' : 'IN PROGRESS';
+                        const statusColor = item.status === 'complete' ? '#28a745' : '#ffc107';
                         reportHTML += `
                             <div style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
-                                <strong>${item.date}</strong> - 
+                                <span style="background: ${statusColor}; color: ${item.status === 'complete' ? 'white' : 'black'}; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold;">[${statusText}]</span>
                                 ${item.description}
                                 ${item.team_member ? ` - ${item.team_member}` : ''}
                             </div>
