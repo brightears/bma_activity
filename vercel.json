@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/simple-version/bma-report.html"
+      "destination": "/simple-version/bma-weekly-report-with-activities.html"
     }
   ]
 }
