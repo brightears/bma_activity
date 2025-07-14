@@ -328,6 +328,15 @@
                 </div>
             </div>
 
+            <!-- Sales Activities -->
+            <div class="form-section">
+                <h2>Sales Activities</h2>
+                <div id="sales-activities">
+                    <!-- Sales activities will be dynamically added here -->
+                </div>
+                <button type="button" class="btn btn-add" onclick="addSalesActivity()">+ Add Sales Activity</button>
+            </div>
+
             <!-- Music Design Deliverables -->
             <div class="form-section">
                 <h2>Music Design Deliverables</h2>
@@ -474,6 +483,30 @@
             autoSave();
         }
         
+        // Add Sales Activity
+        function addSalesActivity(data = {}) {
+            const container = document.getElementById('sales-activities');
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'activity-item';
+            
+            itemDiv.innerHTML = `
+                <div class="activity-row">
+                    <input type="date" class="activity-date" value="${data.date || getTodayDate()}" onchange="autoSave()">
+                    <input type="text" class="activity-description" placeholder="Sales activity description" value="${data.description || ''}" onchange="autoSave()">
+                    <input type="text" class="activity-member" placeholder="Team Member" value="${data.team_member || ''}" onchange="autoSave()">
+                    <button type="button" class="btn btn-remove" onclick="removeSalesActivity(this)">X</button>
+                </div>
+            `;
+            
+            container.appendChild(itemDiv);
+        }
+        
+        // Remove Sales Activity
+        function removeSalesActivity(button) {
+            button.closest('.activity-item').remove();
+            autoSave();
+        }
+        
         // Add Music Item
         function addMusicItem(data = {}) {
             const container = document.getElementById('music-items');
@@ -564,6 +597,15 @@
                 });
             });
             
+            const salesActivities = [];
+            document.querySelectorAll('#sales-activities .activity-item').forEach(item => {
+                salesActivities.push({
+                    date: item.querySelector('.activity-date').value,
+                    description: item.querySelector('.activity-description').value,
+                    team_member: item.querySelector('.activity-member').value
+                });
+            });
+            
             const musicItems = [];
             document.querySelectorAll('#music-items .activity-item').forEach(item => {
                 musicItems.push({
@@ -586,6 +628,7 @@
                 week_number: parseInt(document.getElementById('week').value),
                 year: parseInt(document.getElementById('year').value),
                 sales_items: salesItems,
+                sales_activities: salesActivities,
                 music_items: musicItems,
                 tech_items: techItems,
                 challenges: document.getElementById('challenges').value.split('\n').filter(c => c.trim()),
@@ -627,12 +670,20 @@
                     
                     // Clear existing items
                     document.getElementById('sales-items').innerHTML = '';
+                    document.getElementById('sales-activities').innerHTML = '';
                     document.getElementById('music-items').innerHTML = '';
                     document.getElementById('tech-items').innerHTML = '';
                     
                     // Load sales items
                     if (salesResult.data) {
                         salesResult.data.forEach(item => addSalesItem(item));
+                    }
+                    
+                    // Load sales activities from localStorage (temporary solution)
+                    const savedActivities = localStorage.getItem(`sales-activities-${week}-${year}`);
+                    if (savedActivities) {
+                        const activities = JSON.parse(savedActivities);
+                        activities.forEach(item => addSalesActivity(item));
                     }
                     
                     // Load music items
@@ -667,6 +718,7 @@
                     // No report exists, clear the form
                     currentReportId = null;
                     document.getElementById('sales-items').innerHTML = '';
+                    document.getElementById('sales-activities').innerHTML = '';
                     document.getElementById('music-items').innerHTML = '';
                     document.getElementById('tech-items').innerHTML = '';
                     document.getElementById('challenges').value = '';
@@ -675,6 +727,7 @@
                     
                     // Add one empty row for each section
                     addSalesItem();
+                    addSalesActivity();
                     addMusicItem();
                     addTechItem();
                 }
@@ -775,6 +828,14 @@
                 
                 await Promise.all(insertPromises);
                 
+                // Save sales activities to localStorage (temporary)
+                if (formData.sales_activities.length > 0) {
+                    localStorage.setItem(
+                        `sales-activities-${formData.week_number}-${formData.year}`,
+                        JSON.stringify(formData.sales_activities)
+                    );
+                }
+                
                 // Update the report's updated_at timestamp
                 await supabase
                     .from('reports')
@@ -867,6 +928,28 @@
                     </div>
                     </div>
                 `;
+            }
+            
+            // Sales Activities
+            if (data.sales_activities && data.sales_activities.length > 0) {
+                reportHTML += `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #FF6B35; margin-bottom: 15px;">Sales Activities</h3>
+                `;
+                
+                data.sales_activities.forEach(item => {
+                    if (item.description) {
+                        reportHTML += `
+                            <div style="margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                                <strong>${item.date}</strong> - 
+                                ${item.description}
+                                ${item.team_member ? ` - ${item.team_member}` : ''}
+                            </div>
+                        `;
+                    }
+                });
+                
+                reportHTML += `</div>`;
             }
             
             // Music Design Deliverables
