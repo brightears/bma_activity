@@ -1049,8 +1049,8 @@
                 const promises = [];
                 
                 // Save sales items
-                if (data.salesData.length > 0) {
-                    const salesItems = data.salesData.map(item => ({
+                if (data.sales && data.sales.length > 0) {
+                    const salesItems = data.sales.map(item => ({
                         report_id: currentReportId,
                         date: new Date().toISOString().split('T')[0],
                         status: item.status === 'new' ? 'New' : 'Existing',
@@ -1064,7 +1064,7 @@
                 }
                 
                 // Save sales activities
-                if (data.salesActivities.length > 0) {
+                if (data.salesActivities && data.salesActivities.length > 0) {
                     const activities = data.salesActivities.map(item => ({
                         report_id: currentReportId,
                         status: item.status,
@@ -1075,8 +1075,8 @@
                 }
                 
                 // Save music items
-                if (data.musicData.length > 0) {
-                    const musicItems = data.musicData.map(item => ({
+                if (data.music && data.music.length > 0) {
+                    const musicItems = data.music.map(item => ({
                         report_id: currentReportId,
                         status: item.status,
                         description: item.description,
@@ -1086,8 +1086,8 @@
                 }
                 
                 // Save tech items
-                if (data.techData.length > 0) {
-                    const techItems = data.techData.map(item => ({
+                if (data.tech && data.tech.length > 0) {
+                    const techItems = data.tech.map(item => ({
                         report_id: currentReportId,
                         status: item.status,
                         description: item.description,
@@ -1097,8 +1097,12 @@
                 }
                 
                 // Save challenges
-                if (data.challenges.length > 0) {
-                    const challenges = data.challenges.map(desc => ({
+                const challengesText = data.challenges || '';
+                if (challengesText.trim()) {
+                    const challenges = challengesText.split('\n')
+                        .map(line => line.trim().replace(/^-\s*/, ''))
+                        .filter(line => line)
+                        .map(desc => ({
                         report_id: currentReportId,
                         description: desc
                     }));
@@ -1106,8 +1110,12 @@
                 }
                 
                 // Save priorities
-                if (data.priorities.length > 0) {
-                    const priorities = data.priorities.map(desc => ({
+                const prioritiesText = data.priorities || '';
+                if (prioritiesText.trim()) {
+                    const priorities = prioritiesText.split('\n')
+                        .map(line => line.trim().replace(/^-\s*/, ''))
+                        .filter(line => line)
+                        .map(desc => ({
                         report_id: currentReportId,
                         description: desc
                     }));
