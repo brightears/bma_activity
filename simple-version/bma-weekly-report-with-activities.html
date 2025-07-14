@@ -509,7 +509,10 @@
             activityItem.className = 'activity-item';
             activityItem.innerHTML = `
                 <div class="activity-row">
-                    <input type="date" name="activity-date" value="${new Date().toISOString().split('T')[0]}">
+                    <select name="activity-status">
+                        <option value="progress">In Progress</option>
+                        <option value="complete">Complete</option>
+                    </select>
                     <input type="text" name="activity-description" placeholder="Sales activity description">
                     <select name="activity-member">
                         <option value="">Team Member</option>
@@ -662,12 +665,12 @@
             
             // Collect sales activities
             document.querySelectorAll('#sales-activities .activity-item').forEach(item => {
-                const date = item.querySelector('[name="activity-date"]').value;
+                const status = item.querySelector('[name="activity-status"]').value;
                 const description = item.querySelector('[name="activity-description"]').value;
                 const member = item.querySelector('[name="activity-member"]').value;
                 
                 if (description) {
-                    data.salesActivities.push({ date, description, member });
+                    data.salesActivities.push({ status, description, member });
                 }
             });
             
@@ -837,7 +840,8 @@
                         <ul class="report-list">
                 `;
                 data.salesActivities.forEach(item => {
-                    html += `<li>${item.date} - ${item.description}`;
+                    const status = statusMap[item.status] || item.status.toUpperCase();
+                    html += `<li><span class="status-badge status-${item.status}">[${status}]</span> ${item.description}`;
                     if (item.member) html += ` – ${item.member}`;
                     html += '</li>';
                 });
@@ -1073,7 +1077,7 @@
                     data.salesActivities.forEach(activity => {
                         addSalesActivity();
                         const lastItem = activitiesContainer.querySelector('.activity-item:last-child');
-                        lastItem.querySelector('[name="activity-date"]').value = activity.date || '';
+                        lastItem.querySelector('[name="activity-status"]').value = activity.status || 'progress';
                         lastItem.querySelector('[name="activity-description"]').value = activity.description || '';
                         lastItem.querySelector('[name="activity-member"]').value = activity.member || '';
                     });
