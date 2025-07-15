@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BMAsia Report</title>
-    <!-- Manual save only - no auto-save, no auto-refresh to prevent duplications -->
-    <!-- Supabase Client -->
+    <!-- Simple single-document approach - no complex sync -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -100,13 +99,17 @@
             align-items: center;
         }
         
-        .btn {
-            padding: 10px 20px;
+        button {
+            cursor: pointer;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 16px;
             transition: background 0.3s;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            margin-right: 10px;
         }
         
         .btn-primary {
@@ -115,7 +118,7 @@
         }
         
         .btn-primary:hover {
-            background: #E55A2B;
+            background: #ff5722;
         }
         
         .btn-secondary {
@@ -139,7 +142,8 @@
         .btn-add {
             background: #28a745;
             color: white;
-            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 14px;
         }
         
         .btn-add:hover {
@@ -149,68 +153,65 @@
         .btn-remove {
             background: #dc3545;
             color: white;
-            padding: 5px 10px;
-            font-size: 14px;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 20px;
+            line-height: 1;
         }
         
         .btn-remove:hover {
             background: #c82333;
         }
         
-        .metrics {
+        .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin: 15px 0;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
         }
         
-        .metric-card {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-            border: 1px solid #e9ecef;
+        .metric-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #FF6B35;
         }
         
-        .metric-value {
-            font-size: 1.2em;
-            font-weight: 600;
+        .metric-box h3 {
             color: #FF6B35;
-        }
-        
-        .metric-label {
-            color: #6c757d;
-            margin-top: 2px;
-            font-size: 0.85em;
-        }
-        
-        .form-metrics-header {
-            font-size: 1.1em;
-            color: #666;
-            margin-top: 15px;
             margin-bottom: 10px;
         }
         
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+        }
+        
+        .action-buttons {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            text-align: center;
+        }
+        
         #report-output {
-            margin-top: 40px;
+            display: none;
+            margin-top: 30px;
             padding: 30px;
             background: white;
-            border: 2px solid #FF6B35;
-            border-radius: 10px;
-            display: none;
+            border: 1px solid #ddd;
+            border-radius: 8px;
         }
         
         .report-header {
             text-align: center;
             margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #eee;
-        }
-        
-        .report-header h1 {
-            color: #FF6B35;
-            font-size: 24px;
-            margin: 0 0 10px 0;
         }
         
         .report-section {
@@ -220,16 +221,26 @@
         .report-section h3 {
             color: #FF6B35;
             margin-bottom: 10px;
+            font-size: 1.2em;
         }
         
         .report-list {
-            list-style: disc;
-            padding-left: 20px;
+            list-style: none;
+            padding-left: 0;
         }
         
         .report-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .report-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #FF6B35;
+            font-weight: bold;
         }
         
         .status-badge {
@@ -238,99 +249,48 @@
             border-radius: 3px;
             font-size: 12px;
             font-weight: bold;
-            margin-right: 8px;
+            margin-right: 5px;
         }
         
-        .status-complete { background: #d4edda; color: #155724; }
-        .status-progress { background: #fff3cd; color: #856404; }
-        .status-new { background: #cce5ff; color: #004085; }
+        .status-new, .status-progress {
+            background: #ffc107;
+            color: #000;
+        }
         
-        .action-buttons {
-            margin-top: 30px;
-            text-align: center;
-            gap: 10px;
-            display: flex;
-            justify-content: center;
+        .status-closed, .status-complete {
+            background: #28a745;
+            color: white;
         }
         
         @media print {
-            @page {
-                margin: 0.5in;
-                size: letter;
-            }
-            
-            /* Note: To remove browser headers/footers (date, time, page title):
-               - Chrome/Edge: Print dialog > More settings > Uncheck "Headers and footers"
-               - Safari: File > Print > Show Details > Uncheck "Print headers and footers"
-               - Firefox: Print dialog > Page Setup > Margins & Header/Footer > Set all to "Blank" */
-            
-            body { 
-                background: white; 
+            body {
+                background: white;
                 padding: 0;
-                margin: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
             }
             
-            .container { 
-                box-shadow: none; 
-                padding: 0; 
-                max-width: 100%;
-                margin: 0;
+            .container {
+                box-shadow: none;
+                padding: 20px;
             }
             
-            /* Hide all form elements */
-            .form-section { display: none !important; }
-            .btn { display: none !important; }
-            .action-buttons { display: none !important; }
-            .form-metrics-header { display: none !important; }
-            .form-metrics { display: none !important; }
-            
-            /* Only show the report output */
-            #report-output { 
-                display: block !important; 
-                border: none; 
-                padding: 0; 
-                margin: 0;
-                width: 100%;
+            .action-buttons, .btn {
+                display: none;
             }
             
-            .report-header { 
-                margin-bottom: 20px; 
-                padding-bottom: 15px;
-                text-align: center;
+            #report-output {
+                border: none;
+                padding: 0;
             }
-            
-            .report-header h1 {
-                display: block !important;
-                font-size: 1.5em;
-                margin: 0 0 10px 0;
-                color: #FF6B35;
-            }
-            
-            .report-section { 
-                margin-bottom: 20px; 
-                page-break-inside: avoid; 
-            }
-            
-            h3 { font-size: 1.1em; margin-bottom: 8px; }
-            .report-list li { padding: 5px 0; }
-            
-            /* Hide only the form title, not report title */
-            .container > h1:first-child { display: none !important; }
-            .subtitle { display: none !important; }
         }
-        
-        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>BMA Weekly Report Generator</h1>
+        <h1>BMAsia Activity Report</h1>
         <p class="subtitle">Week <span id="week-number"></span> - <span id="current-date"></span></p>
         
         <form id="report-form">
-            <!-- Sales Section -->
+            <!-- Sales Highlights Section -->
             <div class="form-section">
                 <h2>Sales Highlights</h2>
                 <div id="sales-items">
@@ -342,11 +302,10 @@
                             </select>
                             <select name="sales-product">
                                 <option value="SYB">SYB</option>
-                                <option value="LIM">LIM</option>
                             </select>
-                            <input type="text" name="sales-description" placeholder="Client/Description" required>
-                            <input type="number" name="sales-zones" placeholder="Zones" min="0">
-                            <input type="number" name="sales-yearly" placeholder="Yearly Value" min="0">
+                            <input type="text" name="sales-description" placeholder="Client/Description">
+                            <input type="number" name="sales-zones" placeholder="Zones">
+                            <input type="number" name="sales-yearly" placeholder="Yearly Value">
                             <select name="sales-currency">
                                 <option value="USD">USD</option>
                                 <option value="THB">THB</option>
@@ -363,44 +322,29 @@
                 </div>
                 <button type="button" class="btn btn-add" onclick="addSalesItem()">+ Add Sales Item</button>
                 
-                <!-- Sales Metrics Display -->
-                <h2 class="form-metrics-header">International (USD)</h2>
-                <div class="metrics form-metrics">
-                    <div class="metric-card">
-                        <div class="metric-value" id="closed-zones-usd">0</div>
-                        <div class="metric-label">Closed Zones</div>
+                <!-- Metrics Summary -->
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <h3>International (USD)</h3>
+                        <div class="metric-row">
+                            <span>Closed:</span>
+                            <span class="metric-value"><span id="closed-zones-usd">0</span> zones, <span id="closed-amount-usd">$0</span></span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Pipeline:</span>
+                            <span class="metric-value"><span id="pipeline-zones-usd">0</span> zones, <span id="pipeline-amount-usd">$0</span></span>
+                        </div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="closed-amount-usd">$0</div>
-                        <div class="metric-label">Closed Amount</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="pipeline-zones-usd">0</div>
-                        <div class="metric-label">Pipeline Zones</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="pipeline-amount-usd">$0</div>
-                        <div class="metric-label">Pipeline Amount</div>
-                    </div>
-                </div>
-                
-                <h2 class="form-metrics-header">Thailand (THB)</h2>
-                <div class="metrics form-metrics">
-                    <div class="metric-card">
-                        <div class="metric-value" id="closed-zones-thb">0</div>
-                        <div class="metric-label">Closed Zones</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="closed-amount-thb">฿0</div>
-                        <div class="metric-label">Closed Amount</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="pipeline-zones-thb">0</div>
-                        <div class="metric-label">Pipeline Zones</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="pipeline-amount-thb">฿0</div>
-                        <div class="metric-label">Pipeline Amount</div>
+                    <div class="metric-box">
+                        <h3>Thailand (THB)</h3>
+                        <div class="metric-row">
+                            <span>Closed:</span>
+                            <span class="metric-value"><span id="closed-zones-thb">0</span> zones, <span id="closed-amount-thb">฿0</span></span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Pipeline:</span>
+                            <span class="metric-value"><span id="pipeline-zones-thb">0</span> zones, <span id="pipeline-amount-thb">฿0</span></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -439,7 +383,7 @@
                                 <option value="progress">In Progress</option>
                                 <option value="complete">Complete</option>
                             </select>
-                            <input type="text" name="music-description" placeholder="Description">
+                            <input type="text" name="music-description" placeholder="Music design deliverable">
                             <select name="music-member">
                                 <option value="">Team Member</option>
                                 <option value="Tohmo">Tohmo</option>
@@ -464,7 +408,7 @@
                                 <option value="progress">In Progress</option>
                                 <option value="complete">Complete</option>
                             </select>
-                            <input type="text" name="tech-description" placeholder="Description">
+                            <input type="text" name="tech-description" placeholder="Tech/Ops update">
                             <select name="tech-member">
                                 <option value="">Team Member</option>
                                 <option value="Keith">Keith</option>
@@ -496,8 +440,8 @@
             <div class="action-buttons">
                 <button type="button" class="btn btn-primary" onclick="generateReport()">Generate Report</button>
                 <button type="button" class="btn btn-secondary" onclick="saveToSheets()">Save to Google Sheets</button>
-                <button type="button" class="btn btn-secondary" onclick="triggerManualSave()">Save Draft</button>
-                <button type="button" class="btn btn-danger" onclick="clearDraft()">Clear All Data (Temporary)</button>
+                <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
+                <button type="button" class="btn btn-danger" onclick="clearDraft()">Clear Form</button>
             </div>
         </form>
         
@@ -507,30 +451,11 @@
 
     <script>
         // Supabase Configuration
-        const SUPABASE_URL = 'https://kkhxkfdmmkhhykzljqzl.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtraHhrZmRtbWtoaHlremxqcXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTA0MzksImV4cCI6MjA2ODA2NjQzOX0.H20K31RXztvPn8wREpIthNwnNEDX5hlW1x6TsTHtTTw';
+        const SUPABASE_URL = 'https://dzxytqfpxvmkuwrqncbq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6eHl0cWZweHZta3V3cnFuY2JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQwMjE4OTIsImV4cCI6MjA0OTU5Nzg5Mn0.9w6F_noe7PzhF-YzmW0RrI7k3V2fJoS4v_ePvK30aqY';
         
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Current report ID
-        let currentReportId = null;
-        let autoSaveTimer = null;
-        let isLoadingData = false;
-        let isPopulatingForm = false;
-        
-        // Track item states for proper updates
-        let itemStates = {
-            sales: new Map(),
-            salesActivities: new Map(),
-            music: new Map(),
-            tech: new Map(),
-            challenges: new Map(),
-            priorities: new Map()
-        };
-        
-        // Track last sync time to detect conflicts
-        let lastSyncTime = null;
         
         // Initialize week number and date
         function initializeDate() {
@@ -549,15 +474,33 @@
         // Add item functions
         function addSalesItem() {
             const container = document.getElementById('sales-items');
-            const newItem = container.children[0].cloneNode(true);
-            newItem.querySelectorAll('input').forEach(input => input.value = '');
-            newItem.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-            
-            // Add unique ID for tracking
-            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            newItem.dataset.itemId = tempId;
-            newItem.dataset.isNew = 'true';
-            
+            const newItem = document.createElement('div');
+            newItem.className = 'sales-item';
+            newItem.innerHTML = `
+                <div class="item-row">
+                    <select name="sales-status">
+                        <option value="new">New</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                    <select name="sales-product">
+                        <option value="SYB">SYB</option>
+                    </select>
+                    <input type="text" name="sales-description" placeholder="Client/Description">
+                    <input type="number" name="sales-zones" placeholder="Zones">
+                    <input type="number" name="sales-yearly" placeholder="Yearly Value">
+                    <select name="sales-currency">
+                        <option value="USD">USD</option>
+                        <option value="THB">THB</option>
+                    </select>
+                    <select name="sales-member">
+                        <option value="">Team Member</option>
+                        <option value="Nikki">Nikki</option>
+                        <option value="Norbert">Norbert</option>
+                        <option value="All">All</option>
+                    </select>
+                    <button type="button" class="btn btn-remove" onclick="removeItem(this)">×</button>
+                </div>
+            `;
             container.appendChild(newItem);
             updateMetrics();
         }
@@ -566,12 +509,6 @@
             const container = document.getElementById('sales-activities');
             const activityItem = document.createElement('div');
             activityItem.className = 'activity-item';
-            
-            // Add unique ID for tracking
-            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            activityItem.dataset.itemId = tempId;
-            activityItem.dataset.isNew = 'true';
-            
             activityItem.innerHTML = `
                 <div class="activity-row">
                     <select name="activity-status">
@@ -593,16 +530,8 @@
         
         function addMusicItem() {
             const container = document.getElementById('music-items');
-            
-            // Create new item instead of cloning to avoid issues when container is empty
             const musicItem = document.createElement('div');
             musicItem.className = 'activity-item';
-            
-            // Add unique ID for tracking
-            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            musicItem.dataset.itemId = tempId;
-            musicItem.dataset.isNew = 'true';
-            
             musicItem.innerHTML = `
                 <div class="activity-row">
                     <select name="music-status">
@@ -625,16 +554,8 @@
         
         function addTechItem() {
             const container = document.getElementById('tech-items');
-            
-            // Create new item instead of cloning to avoid issues when container is empty
             const techItem = document.createElement('div');
             techItem.className = 'activity-item';
-            
-            // Add unique ID for tracking
-            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            techItem.dataset.itemId = tempId;
-            techItem.dataset.isNew = 'true';
-            
             techItem.innerHTML = `
                 <div class="activity-row">
                     <select name="tech-status">
@@ -658,14 +579,7 @@
         function removeItem(button) {
             const item = button.closest('.sales-item, .activity-item');
             if (item.parentElement.children.length > 1) {
-                // Mark item as deleted if it exists in database
-                if (item.dataset.itemId && !item.dataset.isNew) {
-                    item.dataset.deleted = 'true';
-                    item.style.display = 'none';
-                } else {
-                    // Remove new items immediately
-                    item.remove();
-                }
+                item.remove();
                 updateMetrics();
             }
         }
@@ -720,28 +634,7 @@
             document.getElementById('pipeline-amount-thb').textContent = `฿${Math.round(pipelineAmountTHB).toLocaleString()}`;
         }
         
-        // Generate report
-        function generateReport() {
-            const formData = collectFormData();
-            const reportHTML = createReportHTML(formData);
-            
-            document.getElementById('report-output').innerHTML = reportHTML;
-            document.getElementById('report-output').style.display = 'block';
-            
-            // Add action buttons to report
-            const actionButtons = `
-                <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="window.print()">Print/Save as PDF</button>
-                    <button class="btn btn-secondary" onclick="copyReport()">Copy Report</button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('report-output').style.display='none'">Close</button>
-                </div>
-            `;
-            document.getElementById('report-output').innerHTML += actionButtons;
-            
-            // Scroll to report
-            document.getElementById('report-output').scrollIntoView({ behavior: 'smooth' });
-        }
-        
+        // Collect form data
         function collectFormData() {
             const data = {
                 week: document.getElementById('week-number').textContent,
@@ -819,31 +712,214 @@
             return data;
         }
         
-        function formatAsList(text) {
-            if (!text) return '';
-            
-            // Split by newlines and filter out empty lines
-            const lines = text.split('\n').filter(line => line.trim());
-            
-            // Check if it looks like a list (lines starting with - or numbers)
-            const isList = lines.some(line => line.trim().match(/^[-•*]/) || line.trim().match(/^\d+[.)]/));
-            
-            if (isList || lines.length > 1) {
-                // Format as HTML list
-                return '<ul class="report-list">' + 
-                    lines.map(line => {
-                        // Remove leading dashes, bullets, numbers with better pattern
-                        const cleanLine = line.trim().replace(/^[-•*]\s*/, '').replace(/^\d+[.)]\s*/, '');
-                        return cleanLine ? `<li>${cleanLine}</li>` : '';
-                    }).filter(item => item).join('') + 
-                    '</ul>';
-            } else {
-                // Single paragraph
-                return `<p>${text}</p>`;
+        // SIMPLIFIED SAVE FUNCTION - Just save the entire form as JSON
+        async function saveDraft() {
+            try {
+                const data = collectFormData();
+                const week = parseInt(data.week);
+                const year = new Date().getFullYear();
+                
+                console.log('Saving form data:', data);
+                
+                // Simple upsert - save or update the entire form state
+                const { error } = await supabase
+                    .from('form_states')
+                    .upsert({
+                        week_number: week,
+                        year: year,
+                        form_data: data
+                    }, {
+                        onConflict: 'week_number,year'
+                    });
+                
+                if (error) throw error;
+                
+                // Show success message
+                showMessage('✓ Draft saved successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error saving draft:', error);
+                alert('Error saving draft: ' + error.message);
             }
         }
         
+        // SIMPLIFIED LOAD FUNCTION - Just load the entire form from JSON
+        async function loadDraft() {
+            try {
+                const week = parseInt(document.getElementById('week-number').textContent);
+                const year = new Date().getFullYear();
+                
+                console.log(`Loading form data for week ${week}, year ${year}`);
+                
+                const { data, error } = await supabase
+                    .from('form_states')
+                    .select('form_data')
+                    .eq('week_number', week)
+                    .eq('year', year)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+                    throw error;
+                }
+                
+                if (data && data.form_data) {
+                    populateForm(data.form_data);
+                    console.log('Form data loaded successfully');
+                } else {
+                    console.log('No saved data for this week');
+                }
+                
+            } catch (error) {
+                console.error('Error loading draft:', error);
+            }
+        }
+        
+        // Populate form with saved data
+        function populateForm(data) {
+            // Clear all dynamic items first
+            document.getElementById('sales-items').innerHTML = '';
+            document.getElementById('sales-activities').innerHTML = '';
+            document.getElementById('music-items').innerHTML = '';
+            document.getElementById('tech-items').innerHTML = '';
+            
+            // Load challenges and priorities
+            if (data.challenges) document.querySelector('[name="challenges"]').value = data.challenges;
+            if (data.priorities) document.querySelector('[name="priorities"]').value = data.priorities;
+            
+            // Load sales items
+            if (data.sales && data.sales.length > 0) {
+                data.sales.forEach(item => {
+                    addSalesItem();
+                    const lastItem = document.querySelector('#sales-items .sales-item:last-child');
+                    lastItem.querySelector('[name="sales-status"]').value = item.status || 'new';
+                    lastItem.querySelector('[name="sales-product"]').value = item.product || 'SYB';
+                    lastItem.querySelector('[name="sales-description"]').value = item.description || '';
+                    lastItem.querySelector('[name="sales-zones"]').value = item.zones || '';
+                    lastItem.querySelector('[name="sales-yearly"]').value = item.yearly || '';
+                    lastItem.querySelector('[name="sales-currency"]').value = item.currency || 'USD';
+                    lastItem.querySelector('[name="sales-member"]').value = item.member || '';
+                });
+            } else {
+                addSalesItem(); // Add one empty item
+            }
+            
+            // Load sales activities
+            if (data.salesActivities && data.salesActivities.length > 0) {
+                data.salesActivities.forEach(item => {
+                    addSalesActivity();
+                    const lastItem = document.querySelector('#sales-activities .activity-item:last-child');
+                    lastItem.querySelector('[name="activity-status"]').value = item.status || 'progress';
+                    lastItem.querySelector('[name="activity-description"]').value = item.description || '';
+                    lastItem.querySelector('[name="activity-member"]').value = item.member || '';
+                });
+            } else {
+                addSalesActivity(); // Add one empty item
+            }
+            
+            // Load music items
+            if (data.music && data.music.length > 0) {
+                data.music.forEach(item => {
+                    addMusicItem();
+                    const lastItem = document.querySelector('#music-items .activity-item:last-child');
+                    lastItem.querySelector('[name="music-status"]').value = item.status || 'progress';
+                    lastItem.querySelector('[name="music-description"]').value = item.description || '';
+                    lastItem.querySelector('[name="music-member"]').value = item.member || '';
+                });
+            } else {
+                addMusicItem(); // Add one empty item
+            }
+            
+            // Load tech items
+            if (data.tech && data.tech.length > 0) {
+                data.tech.forEach(item => {
+                    addTechItem();
+                    const lastItem = document.querySelector('#tech-items .activity-item:last-child');
+                    lastItem.querySelector('[name="tech-status"]').value = item.status || 'progress';
+                    lastItem.querySelector('[name="tech-description"]').value = item.description || '';
+                    lastItem.querySelector('[name="tech-member"]').value = item.member || '';
+                });
+            } else {
+                addTechItem(); // Add one empty item
+            }
+            
+            // Update metrics
+            updateMetrics();
+        }
+        
+        // Clear form
+        async function clearDraft() {
+            if (confirm('Are you sure you want to clear all data? This will delete the saved draft for this week.')) {
+                try {
+                    const week = parseInt(document.getElementById('week-number').textContent);
+                    const year = new Date().getFullYear();
+                    
+                    // Delete from database
+                    const { error } = await supabase
+                        .from('form_states')
+                        .delete()
+                        .eq('week_number', week)
+                        .eq('year', year);
+                    
+                    if (error) throw error;
+                    
+                    // Clear form
+                    document.getElementById('report-form').reset();
+                    
+                    // Reset to single empty items
+                    document.getElementById('sales-items').innerHTML = '';
+                    document.getElementById('sales-activities').innerHTML = '';
+                    document.getElementById('music-items').innerHTML = '';
+                    document.getElementById('tech-items').innerHTML = '';
+                    
+                    addSalesItem();
+                    addSalesActivity();
+                    addMusicItem();
+                    addTechItem();
+                    
+                    updateMetrics();
+                    
+                    showMessage('Form cleared', 'success');
+                    
+                } catch (error) {
+                    console.error('Error clearing draft:', error);
+                    alert('Error clearing draft: ' + error.message);
+                }
+            }
+        }
+        
+        // Show message helper
+        function showMessage(text, type = 'success') {
+            const msg = document.createElement('div');
+            msg.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: ${type === 'success' ? '#28a745' : '#dc3545'}; color: white; padding: 10px 20px; border-radius: 5px; z-index: 1000;`;
+            msg.textContent = text;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
+        }
+        
+        // Generate report (no changes needed)
+        function generateReport() {
+            const formData = collectFormData();
+            const reportHTML = createReportHTML(formData);
+            
+            document.getElementById('report-output').innerHTML = reportHTML;
+            document.getElementById('report-output').style.display = 'block';
+            
+            // Add action buttons to report
+            const actionButtons = `
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="window.print()">Print/Save as PDF</button>
+                    <button class="btn btn-secondary" onclick="copyReport()">Copy Report</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('report-output').style.display='none'">Close</button>
+                </div>
+            `;
+            document.getElementById('report-output').innerHTML += actionButtons;
+            
+            // Scroll to report
+            document.getElementById('report-output').scrollIntoView({ behavior: 'smooth' });
+        }
+        
         function createReportHTML(data) {
+            // [Keep the exact same createReportHTML function from the original]
             const statusMap = {
                 'complete': 'COMPLETED',
                 'progress': 'IN PROGRESS',
@@ -851,23 +927,20 @@
                 'closed': 'CLOSED'
             };
             
-            // Check if there's any sales data to show summary
             const hasInternationalData = parseInt(data.metrics.international.closedZones) > 0 || 
                                        parseInt(data.metrics.international.pipelineZones) > 0;
             const hasThailandData = parseInt(data.metrics.thailand.closedZones) > 0 || 
                                    parseInt(data.metrics.thailand.pipelineZones) > 0;
             
-            // Calculate week date range (Monday to Friday)
             const reportDate = new Date(data.date);
             const dayOfWeek = reportDate.getDay();
-            const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days
+            const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
             const monday = new Date(reportDate);
             monday.setDate(reportDate.getDate() + daysToMonday);
             
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                                'July', 'August', 'September', 'October', 'November', 'December'];
             
-            // Format: "July 7 - July 11, 2025"
             const weekRange = `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${data.date}`;
             
             let html = `
@@ -876,7 +949,6 @@
                 </div>
             `;
             
-            // Only show sales summary if there's data
             if (hasInternationalData || hasThailandData) {
                 html += `
                     <div class="report-section">
@@ -927,7 +999,6 @@
                     </div>`;
             }
             
-            // Sales section
             if (data.sales.length > 0) {
                 html += `
                     <div class="report-section">
@@ -952,7 +1023,6 @@
                 html += '</ul></div>';
             }
             
-            // Sales Activities section
             if (data.salesActivities && data.salesActivities.length > 0) {
                 html += `
                     <div class="report-section">
@@ -968,7 +1038,6 @@
                 html += '</ul></div>';
             }
             
-            // Music section
             if (data.music.length > 0) {
                 html += `
                     <div class="report-section">
@@ -984,7 +1053,6 @@
                 html += '</ul></div>';
             }
             
-            // Tech section
             if (data.tech.length > 0) {
                 html += `
                     <div class="report-section">
@@ -1000,29 +1068,42 @@
                 html += '</ul></div>';
             }
             
-            // Challenges
             if (data.challenges) {
-                const challengesList = formatAsList(data.challenges);
                 html += `
                     <div class="report-section">
                         <h3>Challenges This Week</h3>
-                        ${challengesList}
+                        ${formatAsList(data.challenges)}
                     </div>
                 `;
             }
             
-            // Priorities
             if (data.priorities) {
-                const prioritiesList = formatAsList(data.priorities);
                 html += `
                     <div class="report-section">
                         <h3>Next Week Priorities</h3>
-                        ${prioritiesList}
+                        ${formatAsList(data.priorities)}
                     </div>
                 `;
             }
             
             return html;
+        }
+        
+        function formatAsList(text) {
+            if (!text) return '';
+            const lines = text.split('\n').filter(line => line.trim());
+            const isList = lines.some(line => line.trim().match(/^[-•*]/) || line.trim().match(/^\d+[.)]/));
+            
+            if (isList || lines.length > 1) {
+                return '<ul class="report-list">' + 
+                    lines.map(line => {
+                        const cleanLine = line.trim().replace(/^[-•*]\s*/, '').replace(/^\d+[.)]\s*/, '');
+                        return cleanLine ? `<li>${cleanLine}</li>` : '';
+                    }).filter(item => item).join('') + 
+                    '</ul>';
+            } else {
+                return `<p>${text}</p>`;
+            }
         }
         
         function copyReport() {
@@ -1040,13 +1121,11 @@
             btn.disabled = true;
             btn.textContent = 'Saving...';
             
-            // Create a hidden iframe instead of opening a new window
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.name = 'hidden_iframe';
             document.body.appendChild(iframe);
             
-            // Create a form and submit it to the hidden iframe
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = SCRIPT_URL;
@@ -1059,699 +1138,25 @@
             
             form.appendChild(input);
             document.body.appendChild(form);
-            
-            // Submit the form
             form.submit();
             
-            // Clean up and show success
             setTimeout(() => {
                 document.body.removeChild(form);
                 document.body.removeChild(iframe);
                 btn.disabled = false;
                 btn.textContent = 'Save to Google Sheets';
-                
-                // Show success message
-                const successMsg = document.createElement('div');
-                successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;';
-                successMsg.textContent = '✓ Report saved to Google Sheets!';
-                document.body.appendChild(successMsg);
-                
-                setTimeout(() => {
-                    document.body.removeChild(successMsg);
-                }, 3000);
+                showMessage('✓ Report saved to Google Sheets!', 'success');
             }, 1500);
-        }
-        
-        // Save draft to localStorage
-        // Manual save only - no auto-save
-        function triggerManualSave() {
-            // Don't save while populating form
-            if (isPopulatingForm || isLoadingData) {
-                console.log('Skipping save: form is being populated');
-                return;
-            }
-            saveDraft();
-        }
-        
-        async function saveDraft() {
-            // Don't save if we're in the middle of populating the form
-            if (isPopulatingForm) {
-                console.log('Skipping save: form is being populated');
-                return;
-            }
-            
-            try {
-                console.log('Starting smart save...');
-                
-                // Debug: Check all items in the form
-                const salesItems = document.querySelectorAll('.sales-item');
-                console.log('Sales items in DOM:', salesItems.length);
-                salesItems.forEach((item, index) => {
-                    const desc = item.querySelector('[name="sales-description"]')?.value;
-                    console.log(`Sales item ${index}: desc="${desc}", isNew=${item.dataset.isNew}, itemId=${item.dataset.itemId}`);
-                });
-                
-                // Get current week info
-                const weekMatch = document.getElementById('week-number').textContent.match(/\d+/);
-                const yearMatch = document.getElementById('current-date').textContent.match(/\d{4}/);
-                const week = weekMatch ? parseInt(weekMatch[0]) : 1;
-                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-                
-                // Create or get report
-                if (!currentReportId) {
-                    const { data: reports } = await supabase
-                        .from('reports')
-                        .select('id')
-                        .eq('week_number', week)
-                        .eq('year', year)
-                        .limit(1);
-                    
-                    if (reports && reports.length > 0) {
-                        currentReportId = reports[0].id;
-                    } else {
-                        const { data: newReport, error } = await supabase
-                            .from('reports')
-                            .insert({ week_number: week, year: year })
-                            .select()
-                            .single();
-                        
-                        if (error) {
-                            console.error('Error creating report:', error);
-                            throw error;
-                        }
-                        
-                        currentReportId = newReport.id;
-                    }
-                }
-                
-                // Collect current form data with IDs
-                const currentData = collectFormDataWithIds();
-                const promises = [];
-                
-                // Process sales items
-                const salesUpdates = [];
-                const salesInserts = [];
-                const salesDeletes = [];
-                
-                document.querySelectorAll('.sales-item').forEach(item => {
-                    if (item.dataset.deleted === 'true') {
-                        if (item.dataset.itemId && !item.dataset.isNew) {
-                            salesDeletes.push(item.dataset.itemId);
-                        }
-                        return;
-                    }
-                    
-                    const itemData = {
-                        report_id: currentReportId,
-                        date: new Date().toISOString().split('T')[0],
-                        status: item.querySelector('[name="sales-status"]').value === 'new' ? 'New' : 'Existing',
-                        region: item.querySelector('[name="sales-currency"]').value === 'USD' ? 'INT' : 'TH',
-                        description: item.querySelector('[name="sales-description"]').value,
-                        zones: item.querySelector('[name="sales-zones"]').value?.toString() || '',
-                        yearly_value: parseFloat(item.querySelector('[name="sales-yearly"]').value) || 0,
-                        team_member: item.querySelector('[name="sales-member"]').value
-                    };
-                    
-                    if (!itemData.description) return; // Skip empty items
-                    
-                    if (item.dataset.isNew === 'true') {
-                        salesInserts.push(itemData);
-                    } else if (item.dataset.itemId && hasItemChanged('sales', item.dataset.itemId, itemData)) {
-                        salesUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
-                    }
-                });
-                
-                // Apply sales changes
-                if (salesDeletes.length > 0) {
-                    promises.push(supabase.from('sales_items').delete().in('id', salesDeletes));
-                }
-                if (salesUpdates.length > 0) {
-                    promises.push(supabase.from('sales_items').upsert(salesUpdates));
-                }
-                if (salesInserts.length > 0) {
-                    promises.push(supabase.from('sales_items').insert(salesInserts).select());
-                }
-                
-                // Process sales activities
-                const activitiesUpdates = [];
-                const activitiesInserts = [];
-                const activitiesDeletes = [];
-                
-                console.log('Processing sales activities...');
-                
-                document.querySelectorAll('#sales-activities .activity-item').forEach(item => {
-                    if (item.dataset.deleted === 'true') {
-                        if (item.dataset.itemId && !item.dataset.isNew) {
-                            activitiesDeletes.push(item.dataset.itemId);
-                        }
-                        return;
-                    }
-                    
-                    const itemData = {
-                        report_id: currentReportId,
-                        status: item.querySelector('[name="activity-status"]').value,
-                        description: item.querySelector('[name="activity-description"]').value,
-                        team_member: item.querySelector('[name="activity-member"]').value
-                    };
-                    
-                    if (!itemData.description) return;
-                    
-                    if (item.dataset.isNew === 'true') {
-                        activitiesInserts.push(itemData);
-                    } else if (item.dataset.itemId && hasItemChanged('salesActivities', item.dataset.itemId, itemData)) {
-                        activitiesUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
-                    }
-                });
-                
-                // Apply activities changes
-                if (activitiesDeletes.length > 0) {
-                    promises.push(supabase.from('sales_activities').delete().in('id', activitiesDeletes));
-                }
-                if (activitiesUpdates.length > 0) {
-                    promises.push(supabase.from('sales_activities').upsert(activitiesUpdates));
-                }
-                if (activitiesInserts.length > 0) {
-                    console.log('Inserting sales activities:', activitiesInserts);
-                    promises.push(supabase.from('sales_activities').insert(activitiesInserts).select());
-                }
-                
-                // Process music items
-                const musicUpdates = [];
-                const musicInserts = [];
-                const musicDeletes = [];
-                
-                document.querySelectorAll('#music-items .activity-item').forEach(item => {
-                    if (item.dataset.deleted === 'true') {
-                        if (item.dataset.itemId && !item.dataset.isNew) {
-                            musicDeletes.push(item.dataset.itemId);
-                        }
-                        return;
-                    }
-                    
-                    const itemData = {
-                        report_id: currentReportId,
-                        status: item.querySelector('[name="music-status"]').value,
-                        description: item.querySelector('[name="music-description"]').value,
-                        team_member: item.querySelector('[name="music-member"]').value
-                    };
-                    
-                    if (!itemData.description) return;
-                    
-                    if (item.dataset.isNew === 'true') {
-                        musicInserts.push(itemData);
-                    } else if (item.dataset.itemId && hasItemChanged('music', item.dataset.itemId, itemData)) {
-                        musicUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
-                    }
-                });
-                
-                // Apply music changes
-                if (musicDeletes.length > 0) {
-                    promises.push(supabase.from('music_items').delete().in('id', musicDeletes));
-                }
-                if (musicUpdates.length > 0) {
-                    promises.push(supabase.from('music_items').upsert(musicUpdates));
-                }
-                if (musicInserts.length > 0) {
-                    promises.push(supabase.from('music_items').insert(musicInserts).select());
-                }
-                
-                // Process tech items
-                const techUpdates = [];
-                const techInserts = [];
-                const techDeletes = [];
-                
-                document.querySelectorAll('#tech-items .activity-item').forEach(item => {
-                    if (item.dataset.deleted === 'true') {
-                        if (item.dataset.itemId && !item.dataset.isNew) {
-                            techDeletes.push(item.dataset.itemId);
-                        }
-                        return;
-                    }
-                    
-                    const itemData = {
-                        report_id: currentReportId,
-                        status: item.querySelector('[name="tech-status"]').value,
-                        description: item.querySelector('[name="tech-description"]').value,
-                        team_member: item.querySelector('[name="tech-member"]').value
-                    };
-                    
-                    if (!itemData.description) return;
-                    
-                    if (item.dataset.isNew === 'true') {
-                        techInserts.push(itemData);
-                    } else if (item.dataset.itemId && hasItemChanged('tech', item.dataset.itemId, itemData)) {
-                        techUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
-                    }
-                });
-                
-                // Apply tech changes
-                if (techDeletes.length > 0) {
-                    promises.push(supabase.from('tech_items').delete().in('id', techDeletes));
-                }
-                if (techUpdates.length > 0) {
-                    promises.push(supabase.from('tech_items').upsert(techUpdates));
-                }
-                if (techInserts.length > 0) {
-                    promises.push(supabase.from('tech_items').insert(techInserts).select());
-                }
-                
-                // Process challenges and priorities (these are still replaced as they're text-based)
-                const challengesText = document.querySelector('[name="challenges"]').value || '';
-                const prioritiesText = document.querySelector('[name="priorities"]').value || '';
-                
-                // Only update if changed
-                const currentChallenges = challengesText.split('\n')
-                    .map(line => line.trim().replace(/^-\s*/, ''))
-                    .filter(line => line)
-                    .join('\n');
-                const currentPriorities = prioritiesText.split('\n')
-                    .map(line => line.trim().replace(/^-\s*/, ''))
-                    .filter(line => line)
-                    .join('\n');
-                
-                const storedChallenges = Array.from(itemStates.challenges.values()).join('\n');
-                const storedPriorities = Array.from(itemStates.priorities.values()).join('\n');
-                
-                if (currentChallenges !== storedChallenges) {
-                    promises.push(supabase.from('challenges').delete().eq('report_id', currentReportId));
-                    if (currentChallenges) {
-                        const challenges = currentChallenges.split('\n').map(desc => ({
-                            report_id: currentReportId,
-                            description: desc
-                        }));
-                        promises.push(supabase.from('challenges').insert(challenges));
-                    }
-                }
-                
-                if (currentPriorities !== storedPriorities) {
-                    promises.push(supabase.from('priorities').delete().eq('report_id', currentReportId));
-                    if (currentPriorities) {
-                        const priorities = currentPriorities.split('\n').map(desc => ({
-                            report_id: currentReportId,
-                            description: desc
-                        }));
-                        promises.push(supabase.from('priorities').insert(priorities));
-                    }
-                }
-                
-                // Execute all changes
-                const results = await Promise.all(promises);
-                
-                // Update item IDs for newly inserted items
-                results.forEach(result => {
-                    if (result.data && Array.isArray(result.data)) {
-                        result.data.forEach(newItem => {
-                            // Find the corresponding DOM element and update its ID
-                            updateDomItemId(newItem);
-                        });
-                    }
-                });
-                
-                // Update last sync time
-                lastSyncTime = new Date();
-                
-                // Show saved indicator with success color for manual save
-                const savedMsg = document.createElement('div');
-                savedMsg.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 10px 20px; border-radius: 5px; font-size: 14px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
-                savedMsg.textContent = '✓ Draft saved successfully';
-                document.body.appendChild(savedMsg);
-                
-                setTimeout(() => {
-                    if (document.body.contains(savedMsg)) {
-                        document.body.removeChild(savedMsg);
-                    }
-                }, 2000);
-                
-                console.log('Smart save completed');
-                return true;
-            } catch (error) {
-                console.error('Error saving draft:', error);
-                alert('Error saving draft: ' + error.message);
-                return false;
-            }
-        }
-        
-        // Helper function to check if an item has changed
-        function hasItemChanged(type, itemId, newData) {
-            const storedItem = itemStates[type].get(itemId);
-            if (!storedItem) return true;
-            
-            // Compare relevant fields
-            const relevantFields = Object.keys(newData).filter(key => key !== 'report_id' && key !== 'date' && key !== 'id');
-            return relevantFields.some(field => storedItem[field] !== newData[field]);
-        }
-        
-        // Helper function to collect form data with IDs
-        function collectFormDataWithIds() {
-            const data = collectFormData();
-            // Add IDs from DOM elements
-            data.salesIds = Array.from(document.querySelectorAll('.sales-item')).map(el => el.dataset.itemId);
-            data.activitiesIds = Array.from(document.querySelectorAll('#sales-activities .activity-item')).map(el => el.dataset.itemId);
-            data.musicIds = Array.from(document.querySelectorAll('#music-items .activity-item')).map(el => el.dataset.itemId);
-            data.techIds = Array.from(document.querySelectorAll('#tech-items .activity-item')).map(el => el.dataset.itemId);
-            return data;
-        }
-        
-        // Helper function to update DOM element ID after insert
-        function updateDomItemId(newItem) {
-            // Find elements with temporary IDs and update them
-            document.querySelectorAll('[data-is-new="true"]').forEach(element => {
-                const description = element.querySelector('input[type="text"]')?.value;
-                if (description && description === newItem.description) {
-                    element.dataset.itemId = newItem.id;
-                    element.dataset.isNew = 'false';
-                    
-                    // Update item state
-                    const type = getItemType(element);
-                    if (type) {
-                        itemStates[type].set(newItem.id.toString(), newItem);
-                    }
-                }
-            });
-        }
-        
-        // Helper function to determine item type from DOM element
-        function getItemType(element) {
-            if (element.closest('#sales-items')) return 'sales';
-            if (element.closest('#sales-activities')) return 'salesActivities';
-            if (element.closest('#music-items')) return 'music';
-            if (element.closest('#tech-items')) return 'tech';
-            return null;
-        }
-        
-        // Load draft from Supabase
-        async function loadDraft() {
-            // Prevent concurrent loads
-            if (isLoadingData) {
-                console.log('Already loading data, skipping...');
-                return;
-            }
-            
-            isLoadingData = true;
-            console.log('Loading from Supabase...');
-            
-            try {
-                // Get current week info
-                const weekMatch = document.getElementById('week-number').textContent.match(/\d+/);
-                const yearMatch = document.getElementById('current-date').textContent.match(/\d{4}/);
-                const week = weekMatch ? parseInt(weekMatch[0]) : 1;
-                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-                
-                // Find report
-                const { data: reports } = await supabase
-                    .from('reports')
-                    .select('id')
-                    .eq('week_number', week)
-                    .eq('year', year);
-                
-                if (!reports || reports.length === 0) {
-                    console.log('No data for this week');
-                    return;
-                }
-                
-                currentReportId = reports[0].id;
-                
-                // Load all data
-                const [salesResult, activitiesResult, musicResult, techResult, challengesResult, prioritiesResult] = await Promise.all([
-                    supabase.from('sales_items').select('*').eq('report_id', currentReportId),
-                    supabase.from('sales_activities').select('*').eq('report_id', currentReportId),
-                    supabase.from('music_items').select('*').eq('report_id', currentReportId),
-                    supabase.from('tech_items').select('*').eq('report_id', currentReportId),
-                    supabase.from('challenges').select('*').eq('report_id', currentReportId),
-                    supabase.from('priorities').select('*').eq('report_id', currentReportId)
-                ]);
-                
-                // Clear existing item states
-                itemStates.sales.clear();
-                itemStates.salesActivities.clear();
-                itemStates.music.clear();
-                itemStates.tech.clear();
-                itemStates.challenges.clear();
-                itemStates.priorities.clear();
-                
-                // Store item states and convert to form format
-                const data = {
-                    sales: salesResult.data?.map(item => {
-                        itemStates.sales.set(item.id.toString(), item);
-                        return {
-                            id: item.id,
-                            status: item.status === 'New' ? 'new' : 'closed',
-                            product: 'SYB',
-                            description: item.description,
-                            zones: item.zones,
-                            yearly: item.yearly_value,
-                            currency: item.region === 'INT' ? 'USD' : 'THB',
-                            member: item.team_member
-                        };
-                    }) || [],
-                    salesActivities: activitiesResult.data?.map(item => {
-                        itemStates.salesActivities.set(item.id.toString(), item);
-                        return {
-                            id: item.id,
-                            status: item.status,
-                            description: item.description,
-                            member: item.team_member
-                        };
-                    }) || [],
-                    music: musicResult.data?.map(item => {
-                        itemStates.music.set(item.id.toString(), item);
-                        return {
-                            id: item.id,
-                            status: item.status,
-                            description: item.description,
-                            member: item.team_member
-                        };
-                    }) || [],
-                    tech: techResult.data?.map(item => {
-                        itemStates.tech.set(item.id.toString(), item);
-                        return {
-                            id: item.id,
-                            status: item.status,
-                            description: item.description,
-                            member: item.team_member
-                        };
-                    }) || [],
-                    challenges: challengesResult.data?.map(c => {
-                        itemStates.challenges.set(c.id.toString(), c.description);
-                        return c.description;
-                    })
-                        .filter(desc => desc !== 'Android app didnt work' && desc !== 'Android app didn\'t work')
-                        .join('\n') || '',
-                    priorities: prioritiesResult.data?.map(p => {
-                        itemStates.priorities.set(p.id.toString(), p.description);
-                        return p.description;
-                    })
-                        .filter(desc => desc !== 'List priorities (one per line):')
-                        .join('\n') || ''
-                };
-                
-                console.log('Loaded data from Supabase:', data);
-                populateForm(data);
-                
-            } catch (e) {
-                console.error('Error loading from Supabase:', e);
-            } finally {
-                isLoadingData = false;
-            }
-        }
-        
-        // Populate form with saved data
-        function populateForm(data) {
-            try {
-                // Set flag to prevent auto-save during population
-                isPopulatingForm = true;
-                console.log('Starting form population...');
-                // Load challenges and priorities
-                if (data.challenges) document.querySelector('[name="challenges"]').value = data.challenges;
-                if (data.priorities) document.querySelector('[name="priorities"]').value = data.priorities;
-                
-                // Load sales items
-                if (data.sales && data.sales.length > 0) {
-                    // Clear existing items except the first one
-                    const salesContainer = document.getElementById('sales-items');
-                    while (salesContainer.children.length > 1) {
-                        salesContainer.removeChild(salesContainer.lastChild);
-                    }
-                    
-                    // Update first item
-                    const firstItem = salesContainer.querySelector('.sales-item');
-                    if (data.sales[0]) {
-                        firstItem.dataset.itemId = data.sales[0].id;
-                        firstItem.dataset.isNew = 'false';
-                        firstItem.querySelector('[name="sales-status"]').value = data.sales[0].status || 'new';
-                        if (firstItem.querySelector('[name="sales-product"]') && data.sales[0].product) {
-                            firstItem.querySelector('[name="sales-product"]').value = data.sales[0].product || 'SYB';
-                        }
-                        firstItem.querySelector('[name="sales-description"]').value = data.sales[0].description || '';
-                        firstItem.querySelector('[name="sales-zones"]').value = data.sales[0].zones || '';
-                        firstItem.querySelector('[name="sales-yearly"]').value = data.sales[0].yearly || '';
-                        firstItem.querySelector('[name="sales-currency"]').value = data.sales[0].currency || 'USD';
-                        firstItem.querySelector('[name="sales-member"]').value = data.sales[0].member || '';
-                    } else {
-                        // Ensure empty first item has proper attributes
-                        if (!firstItem.dataset.itemId && !firstItem.dataset.isNew) {
-                            firstItem.dataset.isNew = 'true';
-                        }
-                    }
-                    
-                    // Add remaining items
-                    for (let i = 1; i < data.sales.length; i++) {
-                        addSalesItem();
-                        const lastItem = salesContainer.querySelector('.sales-item:last-child');
-                        lastItem.dataset.itemId = data.sales[i].id;
-                        lastItem.dataset.isNew = 'false';
-                        lastItem.querySelector('[name="sales-status"]').value = data.sales[i].status || 'new';
-                        if (lastItem.querySelector('[name="sales-product"]') && data.sales[i].product) {
-                            lastItem.querySelector('[name="sales-product"]').value = data.sales[i].product || 'SYB';
-                        }
-                        lastItem.querySelector('[name="sales-description"]').value = data.sales[i].description || '';
-                        lastItem.querySelector('[name="sales-zones"]').value = data.sales[i].zones || '';
-                        lastItem.querySelector('[name="sales-yearly"]').value = data.sales[i].yearly || '';
-                        lastItem.querySelector('[name="sales-currency"]').value = data.sales[i].currency || 'USD';
-                        lastItem.querySelector('[name="sales-member"]').value = data.sales[i].member || '';
-                    }
-                }
-                
-                // Load sales activities
-                const activitiesContainer = document.getElementById('sales-activities');
-                
-                if (data.salesActivities && data.salesActivities.length > 0) {
-                    // Clear all existing items first
-                    while (activitiesContainer.children.length > 0) {
-                        activitiesContainer.removeChild(activitiesContainer.lastChild);
-                    }
-                    
-                    // Add items from data
-                    for (let i = 0; i < data.salesActivities.length; i++) {
-                        addSalesActivity();
-                        const lastItem = activitiesContainer.querySelector('.activity-item:last-child');
-                        lastItem.dataset.itemId = data.salesActivities[i].id;
-                        lastItem.dataset.isNew = 'false';
-                        lastItem.querySelector('[name="activity-status"]').value = data.salesActivities[i].status || 'progress';
-                        lastItem.querySelector('[name="activity-description"]').value = data.salesActivities[i].description || '';
-                        lastItem.querySelector('[name="activity-member"]').value = data.salesActivities[i].member || '';
-                    }
-                } else if (activitiesContainer.children.length === 0) {
-                    // Only add one empty item if container is completely empty
-                    addSalesActivity();
-                }
-                
-                // Load music items
-                const musicContainer = document.getElementById('music-items');
-                if (data.music && data.music.length > 0) {
-                    // Clear all existing items first
-                    while (musicContainer.children.length > 0) {
-                        musicContainer.removeChild(musicContainer.lastChild);
-                    }
-                    
-                    // Add items from data
-                    for (let i = 0; i < data.music.length; i++) {
-                        addMusicItem();
-                        const lastItem = musicContainer.querySelector('.activity-item:last-child');
-                        lastItem.dataset.itemId = data.music[i].id;
-                        lastItem.dataset.isNew = 'false';
-                        lastItem.querySelector('[name="music-status"]').value = data.music[i].status || 'progress';
-                        lastItem.querySelector('[name="music-description"]').value = data.music[i].description || '';
-                        lastItem.querySelector('[name="music-member"]').value = data.music[i].member || '';
-                    }
-                } else if (musicContainer.children.length === 0) {
-                    // Only add one empty item if container is completely empty
-                    addMusicItem();
-                }
-                
-                // Load tech items
-                const techContainer = document.getElementById('tech-items');
-                if (data.tech && data.tech.length > 0) {
-                    // Clear all existing items first
-                    while (techContainer.children.length > 0) {
-                        techContainer.removeChild(techContainer.lastChild);
-                    }
-                    
-                    // Add items from data
-                    for (let i = 0; i < data.tech.length; i++) {
-                        addTechItem();
-                        const lastItem = techContainer.querySelector('.activity-item:last-child');
-                        lastItem.dataset.itemId = data.tech[i].id;
-                        lastItem.dataset.isNew = 'false';
-                        lastItem.querySelector('[name="tech-status"]').value = data.tech[i].status || 'progress';
-                        lastItem.querySelector('[name="tech-description"]').value = data.tech[i].description || '';
-                        lastItem.querySelector('[name="tech-member"]').value = data.tech[i].member || '';
-                    }
-                } else if (techContainer.children.length === 0) {
-                    // Only add one empty item if container is completely empty
-                    addTechItem();
-                }
-                
-                // Update metrics
-                updateMetrics();
-                
-                // Reset flag after population is complete
-                setTimeout(() => {
-                    isPopulatingForm = false;
-                    console.log('Form population complete');
-                }, 500);
-            } catch (error) {
-                console.error('Error populating form:', error);
-                // Don't show alert for now, just log the error
-                console.log('Continuing despite error to allow cleanup...');
-                // Reset flag on error
-                isPopulatingForm = false;
-            }
-        }
-        
-        // Clear draft
-        async function clearDraft() {
-            if (confirm('Are you sure you want to clear all data and start fresh?')) {
-                try {
-                    if (currentReportId) {
-                        // Delete all data for current report
-                        await Promise.all([
-                            supabase.from('sales_items').delete().eq('report_id', currentReportId),
-                            supabase.from('sales_activities').delete().eq('report_id', currentReportId),
-                            supabase.from('music_items').delete().eq('report_id', currentReportId),
-                            supabase.from('tech_items').delete().eq('report_id', currentReportId),
-                            supabase.from('challenges').delete().eq('report_id', currentReportId),
-                            supabase.from('priorities').delete().eq('report_id', currentReportId)
-                        ]);
-                        
-                        // Delete the report itself
-                        await supabase.from('reports').delete().eq('id', currentReportId);
-                    }
-                    
-                    // Reload page to show empty form
-                    location.reload();
-                } catch (error) {
-                    console.error('Error clearing data:', error);
-                    alert('Error clearing data: ' + error.message);
-                }
-            }
         }
         
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
             initializeDate();
             
-            // Initialize default items in the HTML with proper attributes
-            // This ensures they get saved when users type in them
-            document.querySelectorAll('.sales-item').forEach(item => {
-                if (!item.dataset.itemId && !item.dataset.isNew) {
-                    item.dataset.isNew = 'true';
-                }
-            });
-            document.querySelectorAll('.activity-item').forEach(item => {
-                if (!item.dataset.itemId && !item.dataset.isNew) {
-                    item.dataset.isNew = 'true';
-                }
-            });
-            
-            // Load saved draft from Supabase
+            // Load saved draft
             loadDraft();
             
-            // Auto-refresh DISABLED to prevent duplication issues
-            // Users must manually refresh the page to see others' updates
-            // setInterval(loadDraft, 30000);
-            
-            // Add change listeners for real-time metric updates only (no auto-save)
+            // Add change listeners for real-time metric updates
             document.addEventListener('input', (e) => {
                 if (e.target.matches('[name*="sales-"]')) {
                     updateMetrics();

@@ -1,92 +1,70 @@
-# BMA Activity Report - Project Documentation
+# BMA Activity Report - Project Documentation (Simplified Version)
 
 ## Overview
-This is a weekly activity report system for BMA Asia that allows team members to track sales, activities, and deliverables. The system uses Supabase for shared data storage, allowing all team members to see and edit the same data in real-time (like Google Sheets).
+This is a weekly activity report system for BMA Asia that allows team members to track sales, activities, and deliverables. The system uses a simple single-document approach with Supabase for data storage.
 
 ## Live URL
 https://bma-activity.vercel.app
 
-## Current Stable Version
-- **Git Tag**: `v1.0-stable` (commit: de1df12)
-- **Date**: December 15, 2024
-- **Status**: All features working correctly
+## Current Version
+- **Version**: 2.0 (Simplified)
+- **Date**: July 15, 2025
+- **Status**: Completely rewritten for simplicity and reliability
 
 ## Key Features
-- **Shared Data**: All users see and edit the same data (stored in Supabase)
-- **Manual Save**: Users must click "Save Draft" button to save changes (auto-save disabled)
-- **No Auto-refresh**: Page must be manually refreshed to see other users' changes (prevents duplications)
+- **Simple JSON Storage**: All form data stored as a single JSON document per week
+- **Manual Save**: Users click "Save Draft" to save changes
+- **Manual Refresh**: Users refresh the page to see others' changes
 - **No Authentication**: Internal use only, no login required
 - **Report Generation**: Generate and print weekly reports
-- **Metrics Tracking**: Automatic calculation of sales metrics (zones, amounts, MRR)
-- **Google Sheets Export**: Export reports to Google Sheets (partially implemented)
+- **Metrics Tracking**: Automatic calculation of sales metrics
+- **Google Sheets Export**: Export reports to Google Sheets
 
 ## Technology Stack
-- **Frontend**: Single HTML file with vanilla JavaScript (no framework)
-- **Database**: Supabase (PostgreSQL)
+- **Frontend**: Single HTML file with vanilla JavaScript
+- **Database**: Supabase (single table with JSON storage)
 - **Hosting**: Vercel (automatic deployment from GitHub)
-- **Version Control**: GitHub (https://github.com/brightears/bma_activity.git)
+- **Version Control**: GitHub
 
-## Main File
-`/simple-version/bma-weekly-report-with-activities.html` - This is the ONLY file being used
+## Project Structure
+```
+/BMA Activity Report
+├── simple-version/
+│   ├── bma-weekly-report-with-activities.html  # Main application file
+│   └── google-script.js                         # Google Sheets integration
+├── simple-table-structure.sql                   # Database schema
+├── CLAUDE.md                                    # This file
+├── README.md                                    # User documentation
+├── TEAM_MEMBERS.md                             # Team member reference
+└── vercel.json                                 # Deployment configuration
+```
 
-## Sections
-1. **Sales Highlights**: Track new/closed deals with zones, yearly values, and currencies
-2. **Sales Activities**: Track ongoing sales activities with status (In Progress/Complete)
-3. **Music Design Deliverables**: Track music team deliverables
-4. **Tech/Ops Updates**: Track technical team updates
-5. **Challenges**: List weekly challenges (one per line)
-6. **Next Week Priorities**: List priorities for the following week (one per line)
-
-## Database Schema (Supabase)
-- `reports`: Main table linking week/year to report data
-- `sales_items`: Sales highlights with status, region, value
-- `sales_activities`: Sales activities with progress status
-- `music_items`: Music deliverables with status
-- `tech_items`: Tech updates with status
-- `challenges`: Weekly challenges (stored as individual entries)
-- `priorities`: Next week priorities (stored as individual entries)
+## Database Schema
+Single table approach:
+```sql
+CREATE TABLE form_states (
+    id SERIAL PRIMARY KEY,
+    week_number INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    form_data JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(week_number, year)
+);
+```
 
 ## How It Works
-1. Data is saved to Supabase only when users click "Save Draft" button
-2. Users must manually refresh the page to see updates from other users
-3. All users see the same data for a given week/year
-4. No authentication required - designed for internal team use
-5. Challenges and priorities are split by line and stored separately, then recombined on load
-
-## Recent Fixes (as of v1.0-stable)
-1. **Auto-adding rows**: Fixed issue where empty rows were being added on each refresh
-2. **Clear Form**: Now properly deletes data from Supabase
-3. **Dropdown width**: Increased to 130px to show "In Progress" fully
-4. **Duplicate data**: Fixed challenges/priorities duplicating on save
-5. **Clean fields**: Removed sample placeholder text and filters out old test data
-
-## Important Notes
-- **Design**: The HTML design must NOT be changed - it works exactly as the client wants
-- **Single File**: Only use `bma-weekly-report-with-activities.html`
-- **Public Access**: RLS policies allow public read/write since no auth is used
-- **Week-based**: Each week/year combination has its own report
-- **Dropdown Width**: Status dropdowns are 130px wide
-- **No Placeholders**: Challenges and priorities fields have no placeholder text
-
-## Common Commands
-- Deploy: Automatic via Vercel when pushing to GitHub
-- Test locally: Open the HTML file directly in a browser
-- View logs: Check browser console for any errors
-- Rollback: `git checkout v1.0-stable` to return to this stable version
+1. All form data is saved as a single JSON document when users click "Save Draft"
+2. Each week/year combination has one document
+3. Users must manually refresh to see others' updates
+4. No complex sync logic - simple "last write wins"
 
 ## Supabase Configuration
 ```javascript
 const supabase = window.supabase.createClient(
     'https://dzxytqfpxvmkuwrqncbq.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6eHl0cWZweHZta3V3cnFuY2JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQwMjE4OTIsImV4cCI6MjA0OTU5Nzg5Mn0.9w6F_noe7PzhF-YzmW0RrI7k3V2fJoS4v_ePvK30aqY'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 );
 ```
-
-## Troubleshooting
-- If data doesn't save: Check browser console for errors, verify Supabase is accessible
-- If "Clear Form" doesn't work: Make sure RLS policies allow DELETE operations
-- If data doesn't sync: Check that the week/year matches between different browsers
-- If seeing duplicate data: The form now filters out known test data like "Android app didn't work"
 
 ## Team Member Dropdowns
 - **Sales Highlights**: Nikki, Norbert, All
@@ -94,14 +72,28 @@ const supabase = window.supabase.createClient(
 - **Music Design Deliverables**: Tohmo, Kuk, Scotty, All
 - **Tech/Ops Updates**: Keith, A, Joe, All
 
-## Known Limitations
-- Google Sheets export doesn't include Sales Activities column yet
-- No authentication - suitable for internal use only
-- All data is publicly accessible via the Supabase API
-- No data validation beyond basic HTML form validation
+## Setup Instructions
+1. Create the `form_states` table in Supabase using `simple-table-structure.sql`
+2. Update Supabase credentials in the HTML file if needed
+3. Deploy to Vercel
+4. Share the URL with team members
 
-## Future Considerations
-- Complete Google Sheets integration with Sales Activities
-- Add user tracking to see who made changes
-- Consider adding basic authentication for external access
-- Add data export features (CSV, PDF)
+## Usage
+1. Open the report for the current week
+2. Fill in your activities
+3. Click "Save Draft" to save
+4. Click "Generate Report" to create the weekly report
+5. Refresh the page to see others' updates
+
+## Troubleshooting
+- **Data not saving**: Check browser console for errors
+- **Data not loading**: Ensure week/year match and refresh the page
+- **Can't see others' changes**: Manually refresh the page
+
+## Benefits of Simplified Approach
+- No more duplication issues
+- No complex state management
+- Easy to understand and debug
+- More reliable multi-user experience
+- Faster performance
+- Less code to maintain
