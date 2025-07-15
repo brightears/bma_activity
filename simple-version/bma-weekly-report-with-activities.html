@@ -506,6 +506,7 @@
         // Current report ID
         let currentReportId = null;
         let autoSaveTimer = null;
+        let isLoadingData = false;
         
         // Initialize week number and date
         function initializeDate() {
@@ -1153,6 +1154,13 @@
         
         // Load draft from Supabase
         async function loadDraft() {
+            // Prevent concurrent loads
+            if (isLoadingData) {
+                console.log('Already loading data, skipping...');
+                return;
+            }
+            
+            isLoadingData = true;
             console.log('Loading from Supabase...');
             
             try {
@@ -1225,12 +1233,17 @@
                 
             } catch (e) {
                 console.error('Error loading from Supabase:', e);
+            } finally {
+                isLoadingData = false;
             }
         }
         
         // Populate form with saved data
         function populateForm(data) {
             try {
+                // Temporarily disable auto-save while populating
+                const originalAutoSave = window.autoSave;
+                window.autoSave = () => {};
                 // Load challenges and priorities
                 if (data.challenges) document.querySelector('[name="challenges"]').value = data.challenges;
                 if (data.priorities) document.querySelector('[name="priorities"]').value = data.priorities;
@@ -1275,12 +1288,13 @@
                 
                 // Load sales activities
                 const activitiesContainer = document.getElementById('sales-activities');
-                // Clear all existing items
-                while (activitiesContainer.children.length > 0) {
-                    activitiesContainer.removeChild(activitiesContainer.lastChild);
-                }
                 
                 if (data.salesActivities && data.salesActivities.length > 0) {
+                    // Clear all existing items first
+                    while (activitiesContainer.children.length > 0) {
+                        activitiesContainer.removeChild(activitiesContainer.lastChild);
+                    }
+                    
                     // Add items from data
                     for (let i = 0; i < data.salesActivities.length; i++) {
                         addSalesActivity();
@@ -1289,63 +1303,65 @@
                         lastItem.querySelector('[name="activity-description"]').value = data.salesActivities[i].description || '';
                         lastItem.querySelector('[name="activity-member"]').value = data.salesActivities[i].member || '';
                     }
-                } else {
-                    // Add one empty item if no data
+                } else if (activitiesContainer.children.length === 0) {
+                    // Only add one empty item if container is completely empty
                     addSalesActivity();
                 }
                 
                 // Load music items
+                const musicContainer = document.getElementById('music-items');
                 if (data.music && data.music.length > 0) {
-                    const musicContainer = document.getElementById('music-items');
-                    while (musicContainer.children.length > 1) {
+                    // Clear all existing items first
+                    while (musicContainer.children.length > 0) {
                         musicContainer.removeChild(musicContainer.lastChild);
                     }
                     
-                    const firstItem = musicContainer.querySelector('.activity-item');
-                    if (data.music[0]) {
-                        firstItem.querySelector('[name="music-status"]').value = data.music[0].status || 'progress';
-                        firstItem.querySelector('[name="music-description"]').value = data.music[0].description || '';
-                        firstItem.querySelector('[name="music-member"]').value = data.music[0].member || '';
-                    }
-                    
-                    for (let i = 1; i < data.music.length; i++) {
+                    // Add items from data
+                    for (let i = 0; i < data.music.length; i++) {
                         addMusicItem();
                         const lastItem = musicContainer.querySelector('.activity-item:last-child');
                         lastItem.querySelector('[name="music-status"]').value = data.music[i].status || 'progress';
                         lastItem.querySelector('[name="music-description"]').value = data.music[i].description || '';
                         lastItem.querySelector('[name="music-member"]').value = data.music[i].member || '';
                     }
+                } else if (musicContainer.children.length === 0) {
+                    // Only add one empty item if container is completely empty
+                    addMusicItem();
                 }
                 
                 // Load tech items
+                const techContainer = document.getElementById('tech-items');
                 if (data.tech && data.tech.length > 0) {
-                    const techContainer = document.getElementById('tech-items');
-                    while (techContainer.children.length > 1) {
+                    // Clear all existing items first
+                    while (techContainer.children.length > 0) {
                         techContainer.removeChild(techContainer.lastChild);
                     }
                     
-                    const firstItem = techContainer.querySelector('.activity-item');
-                    if (data.tech[0]) {
-                        firstItem.querySelector('[name="tech-status"]').value = data.tech[0].status || 'progress';
-                        firstItem.querySelector('[name="tech-description"]').value = data.tech[0].description || '';
-                        firstItem.querySelector('[name="tech-member"]').value = data.tech[0].member || '';
-                    }
-                    
-                    for (let i = 1; i < data.tech.length; i++) {
+                    // Add items from data
+                    for (let i = 0; i < data.tech.length; i++) {
                         addTechItem();
                         const lastItem = techContainer.querySelector('.activity-item:last-child');
                         lastItem.querySelector('[name="tech-status"]').value = data.tech[i].status || 'progress';
                         lastItem.querySelector('[name="tech-description"]').value = data.tech[i].description || '';
                         lastItem.querySelector('[name="tech-member"]').value = data.tech[i].member || '';
                     }
+                } else if (techContainer.children.length === 0) {
+                    // Only add one empty item if container is completely empty
+                    addTechItem();
                 }
                 
                 // Update metrics
                 updateMetrics();
-            autoSave();
+                
+                // Restore auto-save after a short delay
+                setTimeout(() => {
+                    window.autoSave = originalAutoSave;
+                }, 100);
             } catch (error) {
                 console.error('Error populating form:', error);
                 alert('There was an error loading your saved data. The form will start fresh.');
+                // Restore auto-save on error too
+                if (originalAutoSave) window.autoSave = originalAutoSave;
             }
         }
         
