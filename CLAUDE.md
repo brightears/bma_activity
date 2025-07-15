@@ -88,6 +88,12 @@ const supabase = window.supabase.createClient(
 - If data doesn't sync: Check that the week/year matches between different browsers
 - If seeing duplicate data: The form now filters out known test data like "Android app didn't work"
 
+## Team Member Dropdowns
+- **Sales Highlights**: Nikki, Norbert, All
+- **Sales Activities**: Nikki, Norbert, All
+- **Music Design Deliverables**: Tohmo, Kuk, Scotty, All
+- **Tech/Ops Updates**: Keith, A, Joe, All
+
 ## Known Limitations
 - Google Sheets export doesn't include Sales Activities column yet
 - No authentication - suitable for internal use only
