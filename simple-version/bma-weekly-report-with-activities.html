@@ -473,14 +473,14 @@
             <!-- Challenges Section -->
             <div class="form-section">
                 <h2>Challenges This Week</h2>
-                <textarea name="challenges" placeholder="List challenges (one per line):&#10;- Android app connectivity issues&#10;- Delayed payment from client X&#10;- Resource constraints for project Y"></textarea>
+                <textarea name="challenges" placeholder=""></textarea>
                 <small style="color: #666;">Tip: Put each challenge on a new line starting with a dash (-)</small>
             </div>
             
             <!-- Next Week Priorities -->
             <div class="form-section">
                 <h2>Next Week Priorities</h2>
-                <textarea name="priorities" placeholder="List priorities (one per line):&#10;- Close deal with Hotel ABC&#10;- Complete music design for Retail XYZ&#10;- Deploy app update v2.1"></textarea>
+                <textarea name="priorities" placeholder=""></textarea>
                 <small style="color: #666;">Tip: Put each priority on a new line starting with a dash (-)</small>
             </div>
             
@@ -1213,8 +1213,12 @@
                         description: item.description,
                         member: item.team_member
                     })) || [],
-                    challenges: challengesResult.data?.map(c => c.description).join('\n') || '',
-                    priorities: prioritiesResult.data?.map(p => p.description).join('\n') || ''
+                    challenges: challengesResult.data?.map(c => c.description)
+                        .filter(desc => desc !== 'Android app didnt work' && desc !== 'Android app didn\'t work')
+                        .join('\n') || '',
+                    priorities: prioritiesResult.data?.map(p => p.description)
+                        .filter(desc => desc !== 'List priorities (one per line):')
+                        .join('\n') || ''
                 };
                 
                 console.log('Loaded data from Supabase:', data);
