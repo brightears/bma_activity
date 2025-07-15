@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BMAsia Report</title>
-    <!-- Rolled back to stable version -->
+    <!-- Manual save only - no auto-save, no auto-refresh to prevent duplications -->
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -496,7 +496,7 @@
             <div class="action-buttons">
                 <button type="button" class="btn btn-primary" onclick="generateReport()">Generate Report</button>
                 <button type="button" class="btn btn-secondary" onclick="saveToSheets()">Save to Google Sheets</button>
-                <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
+                <button type="button" class="btn btn-secondary" onclick="triggerManualSave()">Save Draft</button>
                 <button type="button" class="btn btn-danger" onclick="clearDraft()">Clear All Data (Temporary)</button>
             </div>
         </form>
@@ -519,6 +519,19 @@
         let isLoadingData = false;
         let isPopulatingForm = false;
         
+        // Track item states for proper updates
+        let itemStates = {
+            sales: new Map(),
+            salesActivities: new Map(),
+            music: new Map(),
+            tech: new Map(),
+            challenges: new Map(),
+            priorities: new Map()
+        };
+        
+        // Track last sync time to detect conflicts
+        let lastSyncTime = null;
+        
         // Initialize week number and date
         function initializeDate() {
             const now = new Date();
@@ -539,6 +552,12 @@
             const newItem = container.children[0].cloneNode(true);
             newItem.querySelectorAll('input').forEach(input => input.value = '');
             newItem.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+            
+            // Add unique ID for tracking
+            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            newItem.dataset.itemId = tempId;
+            newItem.dataset.isNew = 'true';
+            
             container.appendChild(newItem);
             updateMetrics();
         }
@@ -547,6 +566,12 @@
             const container = document.getElementById('sales-activities');
             const activityItem = document.createElement('div');
             activityItem.className = 'activity-item';
+            
+            // Add unique ID for tracking
+            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            activityItem.dataset.itemId = tempId;
+            activityItem.dataset.isNew = 'true';
+            
             activityItem.innerHTML = `
                 <div class="activity-row">
                     <select name="activity-status">
@@ -572,6 +597,12 @@
             // Create new item instead of cloning to avoid issues when container is empty
             const musicItem = document.createElement('div');
             musicItem.className = 'activity-item';
+            
+            // Add unique ID for tracking
+            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            musicItem.dataset.itemId = tempId;
+            musicItem.dataset.isNew = 'true';
+            
             musicItem.innerHTML = `
                 <div class="activity-row">
                     <select name="music-status">
@@ -598,6 +629,12 @@
             // Create new item instead of cloning to avoid issues when container is empty
             const techItem = document.createElement('div');
             techItem.className = 'activity-item';
+            
+            // Add unique ID for tracking
+            const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            techItem.dataset.itemId = tempId;
+            techItem.dataset.isNew = 'true';
+            
             techItem.innerHTML = `
                 <div class="activity-row">
                     <select name="tech-status">
@@ -621,7 +658,14 @@
         function removeItem(button) {
             const item = button.closest('.sales-item, .activity-item');
             if (item.parentElement.children.length > 1) {
-                item.remove();
+                // Mark item as deleted if it exists in database
+                if (item.dataset.itemId && !item.dataset.isNew) {
+                    item.dataset.deleted = 'true';
+                    item.style.display = 'none';
+                } else {
+                    // Remove new items immediately
+                    item.remove();
+                }
                 updateMetrics();
             }
         }
@@ -1039,15 +1083,14 @@
         }
         
         // Save draft to localStorage
-        // Auto-save function with debounce
-        function autoSave() {
+        // Manual save only - no auto-save
+        function triggerManualSave() {
             // Don't save while populating form
             if (isPopulatingForm || isLoadingData) {
-                console.log('Skipping auto-save: form is being populated');
+                console.log('Skipping save: form is being populated');
                 return;
             }
-            clearTimeout(autoSaveTimer);
-            autoSaveTimer = setTimeout(saveDraft, 1000);
+            saveDraft();
         }
         
         async function saveDraft() {
@@ -1058,8 +1101,7 @@
             }
             
             try {
-                const data = collectFormData();
-                console.log('Saving to Supabase:', data);
+                console.log('Starting smart save...');
                 
                 // Get current week info
                 const weekMatch = document.getElementById('week-number').textContent.match(/\d+/);
@@ -1094,120 +1136,296 @@
                     }
                 }
                 
-                // Delete existing items
-                await Promise.all([
-                    supabase.from('sales_items').delete().eq('report_id', currentReportId),
-                    supabase.from('sales_activities').delete().eq('report_id', currentReportId),
-                    supabase.from('music_items').delete().eq('report_id', currentReportId),
-                    supabase.from('tech_items').delete().eq('report_id', currentReportId),
-                    supabase.from('challenges').delete().eq('report_id', currentReportId),
-                    supabase.from('priorities').delete().eq('report_id', currentReportId)
-                ]);
-                
-                // Save new items
+                // Collect current form data with IDs
+                const currentData = collectFormDataWithIds();
                 const promises = [];
                 
-                // Save sales items
-                if (data.sales && data.sales.length > 0) {
-                    const salesItems = data.sales.map(item => ({
+                // Process sales items
+                const salesUpdates = [];
+                const salesInserts = [];
+                const salesDeletes = [];
+                
+                document.querySelectorAll('.sales-item').forEach(item => {
+                    if (item.dataset.deleted === 'true') {
+                        if (item.dataset.itemId && !item.dataset.isNew) {
+                            salesDeletes.push(item.dataset.itemId);
+                        }
+                        return;
+                    }
+                    
+                    const itemData = {
                         report_id: currentReportId,
                         date: new Date().toISOString().split('T')[0],
-                        status: item.status === 'new' ? 'New' : 'Existing',
-                        region: item.currency === 'USD' ? 'INT' : 'TH',
-                        description: item.description,
-                        zones: item.zones?.toString() || '',
-                        yearly_value: parseFloat(item.yearly) || 0,
-                        team_member: item.member
-                    }));
-                    promises.push(supabase.from('sales_items').insert(salesItems));
+                        status: item.querySelector('[name="sales-status"]').value === 'new' ? 'New' : 'Existing',
+                        region: item.querySelector('[name="sales-currency"]').value === 'USD' ? 'INT' : 'TH',
+                        description: item.querySelector('[name="sales-description"]').value,
+                        zones: item.querySelector('[name="sales-zones"]').value?.toString() || '',
+                        yearly_value: parseFloat(item.querySelector('[name="sales-yearly"]').value) || 0,
+                        team_member: item.querySelector('[name="sales-member"]').value
+                    };
+                    
+                    if (!itemData.description) return; // Skip empty items
+                    
+                    if (item.dataset.isNew === 'true') {
+                        salesInserts.push(itemData);
+                    } else if (item.dataset.itemId && hasItemChanged('sales', item.dataset.itemId, itemData)) {
+                        salesUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
+                    }
+                });
+                
+                // Apply sales changes
+                if (salesDeletes.length > 0) {
+                    promises.push(supabase.from('sales_items').delete().in('id', salesDeletes));
+                }
+                if (salesUpdates.length > 0) {
+                    promises.push(supabase.from('sales_items').upsert(salesUpdates));
+                }
+                if (salesInserts.length > 0) {
+                    promises.push(supabase.from('sales_items').insert(salesInserts).select());
                 }
                 
-                // Save sales activities
-                if (data.salesActivities && data.salesActivities.length > 0) {
-                    const activities = data.salesActivities.map(item => ({
+                // Process sales activities
+                const activitiesUpdates = [];
+                const activitiesInserts = [];
+                const activitiesDeletes = [];
+                
+                document.querySelectorAll('#sales-activities .activity-item').forEach(item => {
+                    if (item.dataset.deleted === 'true') {
+                        if (item.dataset.itemId && !item.dataset.isNew) {
+                            activitiesDeletes.push(item.dataset.itemId);
+                        }
+                        return;
+                    }
+                    
+                    const itemData = {
                         report_id: currentReportId,
-                        status: item.status,
-                        description: item.description,
-                        team_member: item.member
-                    }));
-                    promises.push(supabase.from('sales_activities').insert(activities));
+                        status: item.querySelector('[name="activity-status"]').value,
+                        description: item.querySelector('[name="activity-description"]').value,
+                        team_member: item.querySelector('[name="activity-member"]').value
+                    };
+                    
+                    if (!itemData.description) return;
+                    
+                    if (item.dataset.isNew === 'true') {
+                        activitiesInserts.push(itemData);
+                    } else if (item.dataset.itemId && hasItemChanged('salesActivities', item.dataset.itemId, itemData)) {
+                        activitiesUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
+                    }
+                });
+                
+                // Apply activities changes
+                if (activitiesDeletes.length > 0) {
+                    promises.push(supabase.from('sales_activities').delete().in('id', activitiesDeletes));
+                }
+                if (activitiesUpdates.length > 0) {
+                    promises.push(supabase.from('sales_activities').upsert(activitiesUpdates));
+                }
+                if (activitiesInserts.length > 0) {
+                    promises.push(supabase.from('sales_activities').insert(activitiesInserts).select());
                 }
                 
-                // Save music items
-                if (data.music && data.music.length > 0) {
-                    const musicItems = data.music.map(item => ({
+                // Process music items
+                const musicUpdates = [];
+                const musicInserts = [];
+                const musicDeletes = [];
+                
+                document.querySelectorAll('#music-items .activity-item').forEach(item => {
+                    if (item.dataset.deleted === 'true') {
+                        if (item.dataset.itemId && !item.dataset.isNew) {
+                            musicDeletes.push(item.dataset.itemId);
+                        }
+                        return;
+                    }
+                    
+                    const itemData = {
                         report_id: currentReportId,
-                        status: item.status,
-                        description: item.description,
-                        team_member: item.member
-                    }));
-                    promises.push(supabase.from('music_items').insert(musicItems));
+                        status: item.querySelector('[name="music-status"]').value,
+                        description: item.querySelector('[name="music-description"]').value,
+                        team_member: item.querySelector('[name="music-member"]').value
+                    };
+                    
+                    if (!itemData.description) return;
+                    
+                    if (item.dataset.isNew === 'true') {
+                        musicInserts.push(itemData);
+                    } else if (item.dataset.itemId && hasItemChanged('music', item.dataset.itemId, itemData)) {
+                        musicUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
+                    }
+                });
+                
+                // Apply music changes
+                if (musicDeletes.length > 0) {
+                    promises.push(supabase.from('music_items').delete().in('id', musicDeletes));
+                }
+                if (musicUpdates.length > 0) {
+                    promises.push(supabase.from('music_items').upsert(musicUpdates));
+                }
+                if (musicInserts.length > 0) {
+                    promises.push(supabase.from('music_items').insert(musicInserts).select());
                 }
                 
-                // Save tech items
-                if (data.tech && data.tech.length > 0) {
-                    const techItems = data.tech.map(item => ({
+                // Process tech items
+                const techUpdates = [];
+                const techInserts = [];
+                const techDeletes = [];
+                
+                document.querySelectorAll('#tech-items .activity-item').forEach(item => {
+                    if (item.dataset.deleted === 'true') {
+                        if (item.dataset.itemId && !item.dataset.isNew) {
+                            techDeletes.push(item.dataset.itemId);
+                        }
+                        return;
+                    }
+                    
+                    const itemData = {
                         report_id: currentReportId,
-                        status: item.status,
-                        description: item.description,
-                        team_member: item.member
-                    }));
-                    promises.push(supabase.from('tech_items').insert(techItems));
+                        status: item.querySelector('[name="tech-status"]').value,
+                        description: item.querySelector('[name="tech-description"]').value,
+                        team_member: item.querySelector('[name="tech-member"]').value
+                    };
+                    
+                    if (!itemData.description) return;
+                    
+                    if (item.dataset.isNew === 'true') {
+                        techInserts.push(itemData);
+                    } else if (item.dataset.itemId && hasItemChanged('tech', item.dataset.itemId, itemData)) {
+                        techUpdates.push({ ...itemData, id: parseInt(item.dataset.itemId) });
+                    }
+                });
+                
+                // Apply tech changes
+                if (techDeletes.length > 0) {
+                    promises.push(supabase.from('tech_items').delete().in('id', techDeletes));
+                }
+                if (techUpdates.length > 0) {
+                    promises.push(supabase.from('tech_items').upsert(techUpdates));
+                }
+                if (techInserts.length > 0) {
+                    promises.push(supabase.from('tech_items').insert(techInserts).select());
                 }
                 
-                // Delete existing challenges and priorities first
-                promises.push(
-                    supabase.from('challenges').delete().eq('report_id', currentReportId),
-                    supabase.from('priorities').delete().eq('report_id', currentReportId)
-                );
+                // Process challenges and priorities (these are still replaced as they're text-based)
+                const challengesText = document.querySelector('[name="challenges"]').value || '';
+                const prioritiesText = document.querySelector('[name="priorities"]').value || '';
                 
-                // Save challenges
-                const challengesText = data.challenges || '';
-                if (challengesText.trim()) {
-                    const challenges = challengesText.split('\n')
-                        .map(line => line.trim().replace(/^-\s*/, ''))
-                        .filter(line => line)
-                        .map(desc => ({
-                        report_id: currentReportId,
-                        description: desc
-                    }));
-                    promises.push(supabase.from('challenges').insert(challenges));
+                // Only update if changed
+                const currentChallenges = challengesText.split('\n')
+                    .map(line => line.trim().replace(/^-\s*/, ''))
+                    .filter(line => line)
+                    .join('\n');
+                const currentPriorities = prioritiesText.split('\n')
+                    .map(line => line.trim().replace(/^-\s*/, ''))
+                    .filter(line => line)
+                    .join('\n');
+                
+                const storedChallenges = Array.from(itemStates.challenges.values()).join('\n');
+                const storedPriorities = Array.from(itemStates.priorities.values()).join('\n');
+                
+                if (currentChallenges !== storedChallenges) {
+                    promises.push(supabase.from('challenges').delete().eq('report_id', currentReportId));
+                    if (currentChallenges) {
+                        const challenges = currentChallenges.split('\n').map(desc => ({
+                            report_id: currentReportId,
+                            description: desc
+                        }));
+                        promises.push(supabase.from('challenges').insert(challenges));
+                    }
                 }
                 
-                // Save priorities
-                const prioritiesText = data.priorities || '';
-                if (prioritiesText.trim()) {
-                    const priorities = prioritiesText.split('\n')
-                        .map(line => line.trim().replace(/^-\s*/, ''))
-                        .filter(line => line)
-                        .map(desc => ({
-                        report_id: currentReportId,
-                        description: desc
-                    }));
-                    promises.push(supabase.from('priorities').insert(priorities));
+                if (currentPriorities !== storedPriorities) {
+                    promises.push(supabase.from('priorities').delete().eq('report_id', currentReportId));
+                    if (currentPriorities) {
+                        const priorities = currentPriorities.split('\n').map(desc => ({
+                            report_id: currentReportId,
+                            description: desc
+                        }));
+                        promises.push(supabase.from('priorities').insert(priorities));
+                    }
                 }
                 
-                await Promise.all(promises);
+                // Execute all changes
+                const results = await Promise.all(promises);
                 
-                // Show saved indicator
+                // Update item IDs for newly inserted items
+                results.forEach(result => {
+                    if (result.data && Array.isArray(result.data)) {
+                        result.data.forEach(newItem => {
+                            // Find the corresponding DOM element and update its ID
+                            updateDomItemId(newItem);
+                        });
+                    }
+                });
+                
+                // Update last sync time
+                lastSyncTime = new Date();
+                
+                // Show saved indicator with success color for manual save
                 const savedMsg = document.createElement('div');
-                savedMsg.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #666; color: white; padding: 5px 15px; border-radius: 3px; font-size: 12px; z-index: 1000;';
-                savedMsg.textContent = 'Draft saved';
+                savedMsg.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 10px 20px; border-radius: 5px; font-size: 14px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
+                savedMsg.textContent = '✓ Draft saved successfully';
                 document.body.appendChild(savedMsg);
                 
                 setTimeout(() => {
                     if (document.body.contains(savedMsg)) {
                         document.body.removeChild(savedMsg);
                     }
-                }, 1000);
+                }, 2000);
                 
-                console.log('Draft saved successfully');
+                console.log('Smart save completed');
                 return true;
             } catch (error) {
                 console.error('Error saving draft:', error);
                 alert('Error saving draft: ' + error.message);
                 return false;
             }
+        }
+        
+        // Helper function to check if an item has changed
+        function hasItemChanged(type, itemId, newData) {
+            const storedItem = itemStates[type].get(itemId);
+            if (!storedItem) return true;
+            
+            // Compare relevant fields
+            const relevantFields = Object.keys(newData).filter(key => key !== 'report_id' && key !== 'date' && key !== 'id');
+            return relevantFields.some(field => storedItem[field] !== newData[field]);
+        }
+        
+        // Helper function to collect form data with IDs
+        function collectFormDataWithIds() {
+            const data = collectFormData();
+            // Add IDs from DOM elements
+            data.salesIds = Array.from(document.querySelectorAll('.sales-item')).map(el => el.dataset.itemId);
+            data.activitiesIds = Array.from(document.querySelectorAll('#sales-activities .activity-item')).map(el => el.dataset.itemId);
+            data.musicIds = Array.from(document.querySelectorAll('#music-items .activity-item')).map(el => el.dataset.itemId);
+            data.techIds = Array.from(document.querySelectorAll('#tech-items .activity-item')).map(el => el.dataset.itemId);
+            return data;
+        }
+        
+        // Helper function to update DOM element ID after insert
+        function updateDomItemId(newItem) {
+            // Find elements with temporary IDs and update them
+            document.querySelectorAll('[data-is-new="true"]').forEach(element => {
+                const description = element.querySelector('input[type="text"]')?.value;
+                if (description && description === newItem.description) {
+                    element.dataset.itemId = newItem.id;
+                    element.dataset.isNew = 'false';
+                    
+                    // Update item state
+                    const type = getItemType(element);
+                    if (type) {
+                        itemStates[type].set(newItem.id.toString(), newItem);
+                    }
+                }
+            });
+        }
+        
+        // Helper function to determine item type from DOM element
+        function getItemType(element) {
+            if (element.closest('#sales-items')) return 'sales';
+            if (element.closest('#sales-activities')) return 'salesActivities';
+            if (element.closest('#music-items')) return 'music';
+            if (element.closest('#tech-items')) return 'tech';
+            return null;
         }
         
         // Load draft from Supabase
@@ -1252,36 +1470,66 @@
                     supabase.from('priorities').select('*').eq('report_id', currentReportId)
                 ]);
                 
-                // Convert Supabase data to form format
+                // Clear existing item states
+                itemStates.sales.clear();
+                itemStates.salesActivities.clear();
+                itemStates.music.clear();
+                itemStates.tech.clear();
+                itemStates.challenges.clear();
+                itemStates.priorities.clear();
+                
+                // Store item states and convert to form format
                 const data = {
-                    sales: salesResult.data?.map(item => ({
-                        status: item.status === 'New' ? 'new' : 'closed',
-                        product: 'SYB',
-                        description: item.description,
-                        zones: item.zones,
-                        yearly: item.yearly_value,
-                        currency: item.region === 'INT' ? 'USD' : 'THB',
-                        member: item.team_member
-                    })) || [],
-                    salesActivities: activitiesResult.data?.map(item => ({
-                        status: item.status,
-                        description: item.description,
-                        member: item.team_member
-                    })) || [],
-                    music: musicResult.data?.map(item => ({
-                        status: item.status,
-                        description: item.description,
-                        member: item.team_member
-                    })) || [],
-                    tech: techResult.data?.map(item => ({
-                        status: item.status,
-                        description: item.description,
-                        member: item.team_member
-                    })) || [],
-                    challenges: challengesResult.data?.map(c => c.description)
+                    sales: salesResult.data?.map(item => {
+                        itemStates.sales.set(item.id.toString(), item);
+                        return {
+                            id: item.id,
+                            status: item.status === 'New' ? 'new' : 'closed',
+                            product: 'SYB',
+                            description: item.description,
+                            zones: item.zones,
+                            yearly: item.yearly_value,
+                            currency: item.region === 'INT' ? 'USD' : 'THB',
+                            member: item.team_member
+                        };
+                    }) || [],
+                    salesActivities: activitiesResult.data?.map(item => {
+                        itemStates.salesActivities.set(item.id.toString(), item);
+                        return {
+                            id: item.id,
+                            status: item.status,
+                            description: item.description,
+                            member: item.team_member
+                        };
+                    }) || [],
+                    music: musicResult.data?.map(item => {
+                        itemStates.music.set(item.id.toString(), item);
+                        return {
+                            id: item.id,
+                            status: item.status,
+                            description: item.description,
+                            member: item.team_member
+                        };
+                    }) || [],
+                    tech: techResult.data?.map(item => {
+                        itemStates.tech.set(item.id.toString(), item);
+                        return {
+                            id: item.id,
+                            status: item.status,
+                            description: item.description,
+                            member: item.team_member
+                        };
+                    }) || [],
+                    challenges: challengesResult.data?.map(c => {
+                        itemStates.challenges.set(c.id.toString(), c.description);
+                        return c.description;
+                    })
                         .filter(desc => desc !== 'Android app didnt work' && desc !== 'Android app didn\'t work')
                         .join('\n') || '',
-                    priorities: prioritiesResult.data?.map(p => p.description)
+                    priorities: prioritiesResult.data?.map(p => {
+                        itemStates.priorities.set(p.id.toString(), p.description);
+                        return p.description;
+                    })
                         .filter(desc => desc !== 'List priorities (one per line):')
                         .join('\n') || ''
                 };
@@ -1317,6 +1565,8 @@
                     // Update first item
                     const firstItem = salesContainer.querySelector('.sales-item');
                     if (data.sales[0]) {
+                        firstItem.dataset.itemId = data.sales[0].id;
+                        firstItem.dataset.isNew = 'false';
                         firstItem.querySelector('[name="sales-status"]').value = data.sales[0].status || 'new';
                         if (firstItem.querySelector('[name="sales-product"]') && data.sales[0].product) {
                             firstItem.querySelector('[name="sales-product"]').value = data.sales[0].product || 'SYB';
@@ -1332,6 +1582,8 @@
                     for (let i = 1; i < data.sales.length; i++) {
                         addSalesItem();
                         const lastItem = salesContainer.querySelector('.sales-item:last-child');
+                        lastItem.dataset.itemId = data.sales[i].id;
+                        lastItem.dataset.isNew = 'false';
                         lastItem.querySelector('[name="sales-status"]').value = data.sales[i].status || 'new';
                         if (lastItem.querySelector('[name="sales-product"]') && data.sales[i].product) {
                             lastItem.querySelector('[name="sales-product"]').value = data.sales[i].product || 'SYB';
@@ -1357,6 +1609,8 @@
                     for (let i = 0; i < data.salesActivities.length; i++) {
                         addSalesActivity();
                         const lastItem = activitiesContainer.querySelector('.activity-item:last-child');
+                        lastItem.dataset.itemId = data.salesActivities[i].id;
+                        lastItem.dataset.isNew = 'false';
                         lastItem.querySelector('[name="activity-status"]').value = data.salesActivities[i].status || 'progress';
                         lastItem.querySelector('[name="activity-description"]').value = data.salesActivities[i].description || '';
                         lastItem.querySelector('[name="activity-member"]').value = data.salesActivities[i].member || '';
@@ -1378,6 +1632,8 @@
                     for (let i = 0; i < data.music.length; i++) {
                         addMusicItem();
                         const lastItem = musicContainer.querySelector('.activity-item:last-child');
+                        lastItem.dataset.itemId = data.music[i].id;
+                        lastItem.dataset.isNew = 'false';
                         lastItem.querySelector('[name="music-status"]').value = data.music[i].status || 'progress';
                         lastItem.querySelector('[name="music-description"]').value = data.music[i].description || '';
                         lastItem.querySelector('[name="music-member"]').value = data.music[i].member || '';
@@ -1399,6 +1655,8 @@
                     for (let i = 0; i < data.tech.length; i++) {
                         addTechItem();
                         const lastItem = techContainer.querySelector('.activity-item:last-child');
+                        lastItem.dataset.itemId = data.tech[i].id;
+                        lastItem.dataset.isNew = 'false';
                         lastItem.querySelector('[name="tech-status"]').value = data.tech[i].status || 'progress';
                         lastItem.querySelector('[name="tech-description"]').value = data.tech[i].description || '';
                         lastItem.querySelector('[name="tech-member"]').value = data.tech[i].member || '';
@@ -1460,31 +1718,20 @@
             // Load saved draft from Supabase
             loadDraft();
             
-            // Poll for updates every 30 seconds
-            setInterval(loadDraft, 30000);
+            // Auto-refresh DISABLED to prevent duplication issues
+            // Users must manually refresh the page to see others' updates
+            // setInterval(loadDraft, 30000);
             
-            // Save draft on form changes
-            const form = document.getElementById('report-form');
-            form.addEventListener('input', (e) => {
-                autoSave();
-            });
-            
-            form.addEventListener('change', (e) => {
-                autoSave();
-            });
-            
-            // Add change listeners for real-time metric updates
+            // Add change listeners for real-time metric updates only (no auto-save)
             document.addEventListener('input', (e) => {
                 if (e.target.matches('[name*="sales-"]')) {
                     updateMetrics();
-            autoSave();
                 }
             });
             
             document.addEventListener('change', (e) => {
                 if (e.target.matches('[name*="sales-"]')) {
                     updateMetrics();
-            autoSave();
                 }
             });
         });

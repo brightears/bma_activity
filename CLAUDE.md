@@ -13,8 +13,8 @@ https://bma-activity.vercel.app
 
 ## Key Features
 - **Shared Data**: All users see and edit the same data (stored in Supabase)
-- **Auto-save**: Saves automatically 1 second after any change
-- **Real-time Updates**: Refreshes data every 30 seconds to show changes from other users
+- **Manual Save**: Users must click "Save Draft" button to save changes (auto-save disabled)
+- **No Auto-refresh**: Page must be manually refreshed to see other users' changes (prevents duplications)
 - **No Authentication**: Internal use only, no login required
 - **Report Generation**: Generate and print weekly reports
 - **Metrics Tracking**: Automatic calculation of sales metrics (zones, amounts, MRR)
@@ -47,8 +47,8 @@ https://bma-activity.vercel.app
 - `priorities`: Next week priorities (stored as individual entries)
 
 ## How It Works
-1. Data is automatically saved to Supabase when users make changes (1 second debounce)
-2. Every 30 seconds, the page checks for updates from other users
+1. Data is saved to Supabase only when users click "Save Draft" button
+2. Users must manually refresh the page to see updates from other users
 3. All users see the same data for a given week/year
 4. No authentication required - designed for internal team use
 5. Challenges and priorities are split by line and stored separately, then recombined on load
