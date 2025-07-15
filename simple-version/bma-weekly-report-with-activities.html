@@ -127,6 +127,15 @@
             background: #5a6268;
         }
         
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
         .btn-add {
             background: #28a745;
             color: white;
@@ -488,6 +497,7 @@
                 <button type="button" class="btn btn-primary" onclick="generateReport()">Generate Report</button>
                 <button type="button" class="btn btn-secondary" onclick="saveToSheets()">Save to Google Sheets</button>
                 <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
+                <button type="button" class="btn btn-danger" onclick="clearDraft()">Clear All Data (Temporary)</button>
             </div>
         </form>
         
@@ -1359,9 +1369,10 @@
                 }, 100);
             } catch (error) {
                 console.error('Error populating form:', error);
-                alert('There was an error loading your saved data. The form will start fresh.');
+                // Don't show alert for now, just log the error
+                console.log('Continuing despite error to allow cleanup...');
                 // Restore auto-save on error too
-                if (originalAutoSave) window.autoSave = originalAutoSave;
+                if (typeof originalAutoSave !== 'undefined') window.autoSave = originalAutoSave;
             }
         }
         
