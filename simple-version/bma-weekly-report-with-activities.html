@@ -1103,6 +1103,14 @@
             try {
                 console.log('Starting smart save...');
                 
+                // Debug: Check all items in the form
+                const salesItems = document.querySelectorAll('.sales-item');
+                console.log('Sales items in DOM:', salesItems.length);
+                salesItems.forEach((item, index) => {
+                    const desc = item.querySelector('[name="sales-description"]')?.value;
+                    console.log(`Sales item ${index}: desc="${desc}", isNew=${item.dataset.isNew}, itemId=${item.dataset.itemId}`);
+                });
+                
                 // Get current week info
                 const weekMatch = document.getElementById('week-number').textContent.match(/\d+/);
                 const yearMatch = document.getElementById('current-date').textContent.match(/\d{4}/);
@@ -1189,6 +1197,8 @@
                 const activitiesInserts = [];
                 const activitiesDeletes = [];
                 
+                console.log('Processing sales activities...');
+                
                 document.querySelectorAll('#sales-activities .activity-item').forEach(item => {
                     if (item.dataset.deleted === 'true') {
                         if (item.dataset.itemId && !item.dataset.isNew) {
@@ -1221,6 +1231,7 @@
                     promises.push(supabase.from('sales_activities').upsert(activitiesUpdates));
                 }
                 if (activitiesInserts.length > 0) {
+                    console.log('Inserting sales activities:', activitiesInserts);
                     promises.push(supabase.from('sales_activities').insert(activitiesInserts).select());
                 }
                 
@@ -1576,6 +1587,11 @@
                         firstItem.querySelector('[name="sales-yearly"]').value = data.sales[0].yearly || '';
                         firstItem.querySelector('[name="sales-currency"]').value = data.sales[0].currency || 'USD';
                         firstItem.querySelector('[name="sales-member"]').value = data.sales[0].member || '';
+                    } else {
+                        // Ensure empty first item has proper attributes
+                        if (!firstItem.dataset.itemId && !firstItem.dataset.isNew) {
+                            firstItem.dataset.isNew = 'true';
+                        }
                     }
                     
                     // Add remaining items
@@ -1714,6 +1730,19 @@
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
             initializeDate();
+            
+            // Initialize default items in the HTML with proper attributes
+            // This ensures they get saved when users type in them
+            document.querySelectorAll('.sales-item').forEach(item => {
+                if (!item.dataset.itemId && !item.dataset.isNew) {
+                    item.dataset.isNew = 'true';
+                }
+            });
+            document.querySelectorAll('.activity-item').forEach(item => {
+                if (!item.dataset.itemId && !item.dataset.isNew) {
+                    item.dataset.isNew = 'true';
+                }
+            });
             
             // Load saved draft from Supabase
             loadDraft();
