@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supabase Connection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Testing Supabase Connection</h1>
+    <button onclick="testConnection()">Test Connection</button>
+    <button onclick="testSave()">Test Save</button>
+    <button onclick="testLoad()">Test Load</button>
+    <pre id="output"></pre>
+
+    <script>
+        const SUPABASE_URL = 'https://kkhxkfdmmkhhykzljqzl.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtraHhrZmRtbWtoaHlremxqcXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTA0MzksImV4cCI6MjA2ODA2NjQzOX0.H20K31RXztvPn8wREpIthNwnNEDX5hlW1x6TsTHtTTw';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const output = document.getElementById('output');
+        
+        async function testConnection() {
+            output.textContent = 'Testing connection...\n';
+            try {
+                const { data, error } = await supabase
+                    .from('form_states')
+                    .select('*')
+                    .limit(1);
+                
+                if (error) {
+                    output.textContent += 'Error: ' + JSON.stringify(error, null, 2);
+                } else {
+                    output.textContent += 'Success! Table exists and is accessible.\n';
+                    output.textContent += 'Data: ' + JSON.stringify(data, null, 2);
+                }
+            } catch (e) {
+                output.textContent += 'Catch error: ' + e.message;
+            }
+        }
+        
+        async function testSave() {
+            output.textContent = 'Testing save...\n';
+            try {
+                const testData = {
+                    week_number: 999,
+                    year: 2024,
+                    form_data: { test: 'Hello from test!' }
+                };
+                
+                const { data, error } = await supabase
+                    .from('form_states')
+                    .upsert(testData, {
+                        onConflict: 'week_number,year'
+                    });
+                
+                if (error) {
+                    output.textContent += 'Error: ' + JSON.stringify(error, null, 2);
+                } else {
+                    output.textContent += 'Success! Data saved.\n';
+                    output.textContent += 'Response: ' + JSON.stringify(data, null, 2);
+                }
+            } catch (e) {
+                output.textContent += 'Catch error: ' + e.message;
+            }
+        }
+        
+        async function testLoad() {
+            output.textContent = 'Testing load...\n';
+            try {
+                const { data, error } = await supabase
+                    .from('form_states')
+                    .select('*')
+                    .eq('week_number', 999)
+                    .eq('year', 2024)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') {
+                    output.textContent += 'Error: ' + JSON.stringify(error, null, 2);
+                } else if (data) {
+                    output.textContent += 'Success! Data loaded.\n';
+                    output.textContent += 'Data: ' + JSON.stringify(data, null, 2);
+                } else {
+                    output.textContent += 'No data found for week 999.';
+                }
+            } catch (e) {
+                output.textContent += 'Catch error: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>
