@@ -1264,29 +1264,24 @@
                 }
                 
                 // Load sales activities
+                const activitiesContainer = document.getElementById('sales-activities');
+                // Clear all existing items
+                while (activitiesContainer.children.length > 0) {
+                    activitiesContainer.removeChild(activitiesContainer.lastChild);
+                }
+                
                 if (data.salesActivities && data.salesActivities.length > 0) {
-                    const activitiesContainer = document.getElementById('sales-activities');
-                    // Clear existing items except the first one
-                    while (activitiesContainer.children.length > 1) {
-                        activitiesContainer.removeChild(activitiesContainer.lastChild);
-                    }
-                    
-                    // Update first item
-                    const firstItem = activitiesContainer.querySelector('.activity-item');
-                    if (data.salesActivities[0]) {
-                        firstItem.querySelector('[name="activity-status"]').value = data.salesActivities[0].status || 'progress';
-                        firstItem.querySelector('[name="activity-description"]').value = data.salesActivities[0].description || '';
-                        firstItem.querySelector('[name="activity-member"]').value = data.salesActivities[0].member || '';
-                    }
-                    
-                    // Add remaining items
-                    for (let i = 1; i < data.salesActivities.length; i++) {
+                    // Add items from data
+                    for (let i = 0; i < data.salesActivities.length; i++) {
                         addSalesActivity();
                         const lastItem = activitiesContainer.querySelector('.activity-item:last-child');
                         lastItem.querySelector('[name="activity-status"]').value = data.salesActivities[i].status || 'progress';
                         lastItem.querySelector('[name="activity-description"]').value = data.salesActivities[i].description || '';
                         lastItem.querySelector('[name="activity-member"]').value = data.salesActivities[i].member || '';
                     }
+                } else {
+                    // Add one empty item if no data
+                    addSalesActivity();
                 }
                 
                 // Load music items
@@ -1345,9 +1340,30 @@
         }
         
         // Clear draft
-        function clearDraft() {
+        async function clearDraft() {
             if (confirm('Are you sure you want to clear all data and start fresh?')) {
-                location.reload();
+                try {
+                    if (currentReportId) {
+                        // Delete all data for current report
+                        await Promise.all([
+                            supabase.from('sales_items').delete().eq('report_id', currentReportId),
+                            supabase.from('sales_activities').delete().eq('report_id', currentReportId),
+                            supabase.from('music_items').delete().eq('report_id', currentReportId),
+                            supabase.from('tech_items').delete().eq('report_id', currentReportId),
+                            supabase.from('challenges').delete().eq('report_id', currentReportId),
+                            supabase.from('priorities').delete().eq('report_id', currentReportId)
+                        ]);
+                        
+                        // Delete the report itself
+                        await supabase.from('reports').delete().eq('id', currentReportId);
+                    }
+                    
+                    // Reload page to show empty form
+                    location.reload();
+                } catch (error) {
+                    console.error('Error clearing data:', error);
+                    alert('Error clearing data: ' + error.message);
+                }
             }
         }
         
