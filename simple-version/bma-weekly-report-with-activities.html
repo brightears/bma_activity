@@ -95,7 +95,7 @@
         
         .activity-row {
             display: grid;
-            grid-template-columns: 100px 1fr 150px 50px;
+            grid-template-columns: 130px 1fr 150px 50px;
             gap: 10px;
             align-items: center;
         }
@@ -1096,6 +1096,12 @@
                     }));
                     promises.push(supabase.from('tech_items').insert(techItems));
                 }
+                
+                // Delete existing challenges and priorities first
+                promises.push(
+                    supabase.from('challenges').delete().eq('report_id', currentReportId),
+                    supabase.from('priorities').delete().eq('report_id', currentReportId)
+                );
                 
                 // Save challenges
                 const challengesText = data.challenges || '';
