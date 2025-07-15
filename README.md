@@ -17,8 +17,8 @@ A simple weekly activity report system for BMA Asia team members.
 - Track tech/ops updates
 - List weekly challenges and next week's priorities
 - Automatic calculation of sales metrics
-- Export to Google Sheets
 - Generate printable reports
+- Export to Google Sheets
 
 ## How to Use
 
@@ -58,7 +58,8 @@ A simple weekly activity report system for BMA Asia team members.
 - No login required (internal use only)
 - Data is stored in Supabase
 - Hosted on Vercel
-- Source code on GitHub
+- Single HTML file architecture
+- Manual save/refresh for data synchronization
 
 ## Support
 
