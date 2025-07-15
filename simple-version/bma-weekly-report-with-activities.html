@@ -517,6 +517,7 @@
         let currentReportId = null;
         let autoSaveTimer = null;
         let isLoadingData = false;
+        let isPopulatingForm = false;
         
         // Initialize week number and date
         function initializeDate() {
@@ -567,18 +568,52 @@
         
         function addMusicItem() {
             const container = document.getElementById('music-items');
-            const newItem = container.children[0].cloneNode(true);
-            newItem.querySelectorAll('input').forEach(input => input.value = '');
-            newItem.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-            container.appendChild(newItem);
+            
+            // Create new item instead of cloning to avoid issues when container is empty
+            const musicItem = document.createElement('div');
+            musicItem.className = 'activity-item';
+            musicItem.innerHTML = `
+                <div class="activity-row">
+                    <select name="music-status">
+                        <option value="progress">In Progress</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                    <input type="text" name="music-description" placeholder="Music design deliverable">
+                    <select name="music-member">
+                        <option value="">Team Member</option>
+                        <option value="Nikki">Nikki</option>
+                        <option value="Norbert">Norbert</option>
+                        <option value="All">All</option>
+                    </select>
+                    <button type="button" class="btn btn-remove" onclick="removeItem(this)">×</button>
+                </div>
+            `;
+            container.appendChild(musicItem);
         }
         
         function addTechItem() {
             const container = document.getElementById('tech-items');
-            const newItem = container.children[0].cloneNode(true);
-            newItem.querySelectorAll('input').forEach(input => input.value = '');
-            newItem.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-            container.appendChild(newItem);
+            
+            // Create new item instead of cloning to avoid issues when container is empty
+            const techItem = document.createElement('div');
+            techItem.className = 'activity-item';
+            techItem.innerHTML = `
+                <div class="activity-row">
+                    <select name="tech-status">
+                        <option value="progress">In Progress</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                    <input type="text" name="tech-description" placeholder="Tech/Ops update">
+                    <select name="tech-member">
+                        <option value="">Team Member</option>
+                        <option value="Nikki">Nikki</option>
+                        <option value="Norbert">Norbert</option>
+                        <option value="All">All</option>
+                    </select>
+                    <button type="button" class="btn btn-remove" onclick="removeItem(this)">×</button>
+                </div>
+            `;
+            container.appendChild(techItem);
         }
         
         function removeItem(button) {
@@ -1004,11 +1039,22 @@
         // Save draft to localStorage
         // Auto-save function with debounce
         function autoSave() {
+            // Don't save while populating form
+            if (isPopulatingForm || isLoadingData) {
+                console.log('Skipping auto-save: form is being populated');
+                return;
+            }
             clearTimeout(autoSaveTimer);
             autoSaveTimer = setTimeout(saveDraft, 1000);
         }
         
         async function saveDraft() {
+            // Don't save if we're in the middle of populating the form
+            if (isPopulatingForm) {
+                console.log('Skipping save: form is being populated');
+                return;
+            }
+            
             try {
                 const data = collectFormData();
                 console.log('Saving to Supabase:', data);
@@ -1251,9 +1297,9 @@
         // Populate form with saved data
         function populateForm(data) {
             try {
-                // Temporarily disable auto-save while populating
-                const originalAutoSave = window.autoSave;
-                window.autoSave = () => {};
+                // Set flag to prevent auto-save during population
+                isPopulatingForm = true;
+                console.log('Starting form population...');
                 // Load challenges and priorities
                 if (data.challenges) document.querySelector('[name="challenges"]').value = data.challenges;
                 if (data.priorities) document.querySelector('[name="priorities"]').value = data.priorities;
@@ -1363,16 +1409,17 @@
                 // Update metrics
                 updateMetrics();
                 
-                // Restore auto-save after a short delay
+                // Reset flag after population is complete
                 setTimeout(() => {
-                    window.autoSave = originalAutoSave;
-                }, 100);
+                    isPopulatingForm = false;
+                    console.log('Form population complete');
+                }, 500);
             } catch (error) {
                 console.error('Error populating form:', error);
                 // Don't show alert for now, just log the error
                 console.log('Continuing despite error to allow cleanup...');
-                // Restore auto-save on error too
-                if (typeof originalAutoSave !== 'undefined') window.autoSave = originalAutoSave;
+                // Reset flag on error
+                isPopulatingForm = false;
             }
         }
         
