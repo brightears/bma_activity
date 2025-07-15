@@ -1555,15 +1555,31 @@
                 if (data.priorities) document.querySelector('[name="priorities"]').value = data.priorities;
                 
                 // Load sales items
-                const salesContainer = document.getElementById('sales-items');
                 if (data.sales && data.sales.length > 0) {
-                    // Clear ALL existing items
-                    while (salesContainer.children.length > 0) {
+                    // Clear existing items except the first one
+                    const salesContainer = document.getElementById('sales-items');
+                    while (salesContainer.children.length > 1) {
                         salesContainer.removeChild(salesContainer.lastChild);
                     }
                     
-                    // Add all items from data
-                    for (let i = 0; i < data.sales.length; i++) {
+                    // Update first item
+                    const firstItem = salesContainer.querySelector('.sales-item');
+                    if (data.sales[0]) {
+                        firstItem.dataset.itemId = data.sales[0].id;
+                        firstItem.dataset.isNew = 'false';
+                        firstItem.querySelector('[name="sales-status"]').value = data.sales[0].status || 'new';
+                        if (firstItem.querySelector('[name="sales-product"]') && data.sales[0].product) {
+                            firstItem.querySelector('[name="sales-product"]').value = data.sales[0].product || 'SYB';
+                        }
+                        firstItem.querySelector('[name="sales-description"]').value = data.sales[0].description || '';
+                        firstItem.querySelector('[name="sales-zones"]').value = data.sales[0].zones || '';
+                        firstItem.querySelector('[name="sales-yearly"]').value = data.sales[0].yearly || '';
+                        firstItem.querySelector('[name="sales-currency"]').value = data.sales[0].currency || 'USD';
+                        firstItem.querySelector('[name="sales-member"]').value = data.sales[0].member || '';
+                    }
+                    
+                    // Add remaining items
+                    for (let i = 1; i < data.sales.length; i++) {
                         addSalesItem();
                         const lastItem = salesContainer.querySelector('.sales-item:last-child');
                         lastItem.dataset.itemId = data.sales[i].id;
@@ -1578,11 +1594,6 @@
                         lastItem.querySelector('[name="sales-currency"]').value = data.sales[i].currency || 'USD';
                         lastItem.querySelector('[name="sales-member"]').value = data.sales[i].member || '';
                     }
-                } else if (salesContainer.children.length === 0) {
-                    // Only add one empty item if container is completely empty
-                    addSalesItem();
-                    const newItem = salesContainer.querySelector('.sales-item:last-child');
-                    newItem.dataset.isNew = 'true';
                 }
                 
                 // Load sales activities
@@ -1607,8 +1618,6 @@
                 } else if (activitiesContainer.children.length === 0) {
                     // Only add one empty item if container is completely empty
                     addSalesActivity();
-                    const newItem = activitiesContainer.querySelector('.activity-item:last-child');
-                    newItem.dataset.isNew = 'true';
                 }
                 
                 // Load music items
@@ -1632,8 +1641,6 @@
                 } else if (musicContainer.children.length === 0) {
                     // Only add one empty item if container is completely empty
                     addMusicItem();
-                    const newItem = musicContainer.querySelector('.activity-item:last-child');
-                    newItem.dataset.isNew = 'true';
                 }
                 
                 // Load tech items
@@ -1657,8 +1664,6 @@
                 } else if (techContainer.children.length === 0) {
                     // Only add one empty item if container is completely empty
                     addTechItem();
-                    const newItem = techContainer.querySelector('.activity-item:last-child');
-                    newItem.dataset.isNew = 'true';
                 }
                 
                 // Update metrics
@@ -1709,18 +1714,6 @@
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
             initializeDate();
-            
-            // Initialize all default items with proper data attributes
-            document.querySelectorAll('.sales-item').forEach(item => {
-                if (!item.dataset.itemId) {
-                    item.dataset.isNew = 'true';
-                }
-            });
-            document.querySelectorAll('.activity-item').forEach(item => {
-                if (!item.dataset.itemId) {
-                    item.dataset.isNew = 'true';
-                }
-            });
             
             // Load saved draft from Supabase
             loadDraft();
