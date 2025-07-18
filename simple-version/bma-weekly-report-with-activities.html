@@ -202,7 +202,8 @@
         
         #report-output {
             display: none;
-            margin-top: 30px;
+            max-width: 1200px;
+            margin: 30px auto;
             padding: 30px;
             background: white;
             border: 1px solid #ddd;
@@ -445,10 +446,10 @@
                 <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
             </div>
         </form>
-        
-        <!-- Report Output -->
-        <div id="report-output"></div>
     </div>
+    
+    <!-- Report Output (outside container for print) -->
+    <div id="report-output"></div>
 
     <script>
         // Supabase Configuration
